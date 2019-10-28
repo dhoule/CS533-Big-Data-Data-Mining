@@ -33,6 +33,7 @@ namespace NWUClustering {
   }
 
   // Sets up the Points_Outer objects
+    // Called in geometric_partitioning.cpp
   bool Clusters::allocate_outer(int dims) {
 
     if(m_pts_outer == NULL) {
@@ -45,6 +46,7 @@ namespace NWUClustering {
   }
 
   // Adds points to a cluster object
+    // Called in geometric_partitioning.cpp
   bool Clusters::addPoints(int source, int buf_size, int dims, vector<float>& raw_data) {
     // used as itterables
     int i, j, k; 
@@ -93,6 +95,7 @@ namespace NWUClustering {
   }
 
   // Updates OUTER points' cluster IDs
+    // Called in geometric_partitioning.cpp
   bool Clusters::updatePoints(vector< vector<int> >& raw_ind) {
     // used as itterables
     int i, j = -1;
@@ -116,6 +119,7 @@ namespace NWUClustering {
   }
 
   /*
+    Called from mpi_main.cpp
     Reads the binary file. 
     Input data points are equally partioned, each core reading their corresponding part of the file. 
     Later the points will be partioned geometrically.
@@ -234,6 +238,7 @@ namespace NWUClustering {
     }
     return 0;
   }
+  
   // Called from mpi_main...
   int Clusters::build_kdtree() {
     // if the Point objects weren't created, don't bother going further...
@@ -243,7 +248,6 @@ namespace NWUClustering {
     }
 
     //m_kdtree = new kdtree2(m_pts->m_points, true);
-    // TODO I can't find this signiture!!!!
     m_kdtree = new kdtree2(m_pts->m_points, false);
 
     if(m_kdtree == NULL) {
