@@ -29,8 +29,7 @@
 #include "dbscan.h"
 #include "kdtree2.hpp" 
 
-namespace NWUClustering
-{
+namespace NWUClustering {
 	//void run_dbscan_algo_uf(ClusteringAlgo& dbs); // union find dbscan algorithm
 	//void run_dbscan_algo(ClusteringAlgo& dbs); // regular dbscan algorithm
 	
