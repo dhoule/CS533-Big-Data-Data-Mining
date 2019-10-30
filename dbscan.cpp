@@ -324,6 +324,7 @@ namespace NWUClustering {
           scount++;
         }
       }
+      // TODO need a MPI_Wait()
 
       MPI_Alltoall(&isend[0], 1, MPI_INT, &irecv[0], 1, MPI_INT, MPI_COMM_WORLD);
 
@@ -499,7 +500,7 @@ namespace NWUClustering {
           scount++;
         }
       }
-
+      // TODO need a MPI_Wait()
       MPI_Alltoall(&isend[0], 1, MPI_INT, &irecv[0], 1, MPI_INT, MPI_COMM_WORLD);
 
       rcount = 0;
@@ -938,7 +939,7 @@ namespace NWUClustering {
           scount++;
         }
       }
-
+      // TODO need a MPI_Wait()
       MPI_Alltoall(&isend[0], 1, MPI_INT, &irecv[0], 1, MPI_INT, MPI_COMM_WORLD);
 
       rcount = 0;
