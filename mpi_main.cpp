@@ -22,6 +22,7 @@
 /*   Storage and Analysis (Supercomputing, SC'12), pp.62:1-62:11, 2012.      */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include <unistd.h>
 #include "dbscan.h"
 #include "utils.h"
 #include "kdtree2.hpp"
