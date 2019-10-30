@@ -1,10 +1,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*   Files: mpi_main.cpp clusters.cpp  clusters.h utils.h utils.cpp          */
-/*   			dbscan.cpp dbscan.h kdtree2.cpp kdtree2.hpp          */
-/*			geometric_partitioning.h geometric_partitioning.cpp  */
-/*		    						             */
+/*        dbscan.cpp dbscan.h kdtree2.cpp kdtree2.hpp          */
+/*      geometric_partitioning.h geometric_partitioning.cpp  */
+/*                                 */
 /*   Description: an mpi implementation of dbscan clustering algorithm       */
-/*				using the disjoint set data structure        */
+/*        using the disjoint set data structure        */
 /*                                                                           */
 /*   Author:  Md. Mostofa Ali Patwary                                        */
 /*            EECS Department, Northwestern University                       */
@@ -13,13 +13,13 @@
 /*   Copyright, 2012, Northwestern University                                */
 /*   See COPYRIGHT notice in top-level directory.                            */
 /*                                                                           */
-/*   Please cite the following publication if you use this package 	     */
-/* 									     */
+/*   Please cite the following publication if you use this package       */
+/*                       */
 /*   Md. Mostofa Ali Patwary, Diana Palsetia, Ankit Agrawal, Wei-keng Liao,  */
 /*   Fredrik Manne, and Alok Choudhary, "A New Scalable Parallel DBSCAN      */
 /*   Algorithm Using the Disjoint Set Data Structure", Proceedings of the    */
 /*   International Conference on High Performance Computing, Networking,     */
-/*   Storage and Analysis (Supercomputing, SC'12), pp.62:1-62:11, 2012.	     */
+/*   Storage and Analysis (Supercomputing, SC'12), pp.62:1-62:11, 2012.      */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -55,15 +55,14 @@
 using namespace std;
 
 typedef float point_coord_type;
-typedef vector <vector <point_coord_type> >         array2dfloat;
+typedef vector <vector <point_coord_type> > array2dfloat;
 
 float findKMedian(vector<float>& A,int K);
 
 
-static void handle_error(int status, int lineno)
-{
-	fprintf(stderr, "Error at line %d: %s\n", lineno, ncmpi_strerror(status));
-//	MPI_Abort(MPI_COMM_WORLD, 1);
+static void handle_error(int status, int lineno) {
+  fprintf(stderr, "Error at line %d: %s\n", lineno, ncmpi_strerror(status));
+//  MPI_Abort(MPI_COMM_WORLD, 1);
 }
 
 
