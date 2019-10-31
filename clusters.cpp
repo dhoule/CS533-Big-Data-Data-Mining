@@ -149,7 +149,7 @@ namespace NWUClustering {
         file.read((char*)&num_points, sizeof(int));
         // number of dimensions for each data point/record
         file.read((char*)&dims, sizeof(int));
-        cout << "Points " << num_points << " dims " << dims << endl;
+
         // #ifdef _DEBUG 
         if(rank == proc_of_interest) cout << "Points " << num_points << " dims " << dims << endl;
         // #endif
