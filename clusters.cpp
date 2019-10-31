@@ -149,10 +149,10 @@ namespace NWUClustering {
         file.read((char*)&num_points, sizeof(int));
         // number of dimensions for each data point/record
         file.read((char*)&dims, sizeof(int));
-
-        #ifdef _DEBUG 
+        cout << "Points " << num_points << " dims " << dims << endl;
+        // #ifdef _DEBUG 
         if(rank == proc_of_interest) cout << "Points " << num_points << " dims " << dims << endl;
-        #endif
+        // #endif
 
         // compute the respective segments of the file to read.
           // sch = section or search?
@@ -165,12 +165,12 @@ namespace NWUClustering {
         else
           sch = num_points/nproc + 1; // taking care of the remainder, by adding a whole 1
 
-        #ifdef _DEBUG
+        // #ifdef _DEBUG
         if(rank == proc_of_interest) {
           cout << "Segment size " << sch << endl;
           cout << "Points per process on average " << num_points/nproc << endl;
         }
-        #endif
+        // #endif
 
         lower = sch * rank; // the pointer for the starting location
         upper = sch * (rank + 1); // the pointer for the end location
