@@ -35,7 +35,7 @@ namespace NWUClustering {
   // Sets up the Points_Outer objects
     // Called in geometric_partitioning.cpp
   bool Clusters::allocate_outer(int dims) {
-    int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank); if(rank == proc_of_interest) cout << "line: 38" << " in Clusters::allocate_outer" << endl;
+    int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank); if(rank == proc_of_interest) cout << "in Clusters line: 38" << " in Clusters::allocate_outer" << endl;
     if(m_pts_outer == NULL) {
       m_pts_outer = new Points_Outer;
       m_pts_outer->m_prIDs.clear();
