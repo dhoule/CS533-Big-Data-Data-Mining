@@ -35,7 +35,7 @@ namespace NWUClustering {
   // Sets up the Points_Outer objects
     // Called in geometric_partitioning.cpp
   bool Clusters::allocate_outer(int dims) {
-    int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank); if(rank == proc_of_interest) cout << "in Clusters line: 38" << " in Clusters::allocate_outer" << endl;
+    // int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank); if(rank == proc_of_interest) cout << "in Clusters line: 38" << " in Clusters::allocate_outer" << endl;
     if(m_pts_outer == NULL) {
       m_pts_outer = new Points_Outer;
       m_pts_outer->m_prIDs.clear();
@@ -50,10 +50,10 @@ namespace NWUClustering {
   bool Clusters::addPoints(int source, int buf_size, int dims, vector<float>& raw_data) {
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if(rank == proc_of_interest) cout << "in Clusters line: 53" << " in Clusters::updatePoints" << endl;
-    if(rank == proc_of_interest) cout << "in Clusters line: 54" << " source: " << source << endl;
-    if(rank == proc_of_interest) cout << "in Clusters line: 55" << " buf_size: " << buf_size << endl;
-    if(rank == proc_of_interest) cout << "in Clusters line: 56" << " dims: " << dims << endl;
+    // if(rank == proc_of_interest) cout << "in Clusters line: 53" << " in Clusters::updatePoints" << endl;
+    // if(rank == proc_of_interest) cout << "in Clusters line: 54" << " source: " << source << endl;
+    // if(rank == proc_of_interest) cout << "in Clusters line: 55" << " buf_size: " << buf_size << endl;
+    // if(rank == proc_of_interest) cout << "in Clusters line: 56" << " dims: " << dims << endl;
     // used as itterables
     int i, j, k; 
     // pos = original num of points, then used as a key in 'm_pts_outer->m_points'
@@ -62,7 +62,7 @@ namespace NWUClustering {
     int num_points = buf_size / dims;
     // TODO This is for tracing
     //cout << "add points called" << endl; 
-    if(rank == proc_of_interest) cout << "in Clusters line: 65" << " num_points: " << num_points << endl;
+    // if(rank == proc_of_interest) cout << "in Clusters line: 65" << " num_points: " << num_points << endl;
     // incorrect dimension
       // the number of dimensions/attributes can never change
     if(m_pts_outer->m_i_dims != dims)
@@ -72,7 +72,7 @@ namespace NWUClustering {
     pos = m_pts_outer->m_i_num_points;
     m_pts_outer->m_i_num_points += num_points;
     //m_pts_outer->m_points.resize(extents[m_pts_outer->m_i_num_points][dims]);
-    if(rank == proc_of_interest) cout << "in Clusters line: 75" << " m_pts_outer->m_i_num_points: " << m_pts_outer->m_i_num_points << endl;
+    // if(rank == proc_of_interest) cout << "in Clusters line: 75" << " m_pts_outer->m_i_num_points: " << m_pts_outer->m_i_num_points << endl;
     //allocate memory for the points
       // resize() - Resizes the container so that it contains n elements
     m_pts_outer->m_points.resize(m_pts_outer->m_i_num_points);
@@ -89,7 +89,7 @@ namespace NWUClustering {
       for(j = 0; j < dims; j++) {
         // assign the new 'raw_data' elements to the newest points
         m_pts_outer->m_points[pos][j] = raw_data[k++]; // TODO possible buffer overflow????????
-        if(rank == proc_of_interest) cout << "in Clusters line: 92" << " m_pts_outer->m_points[pos][j]: " << m_pts_outer->m_points[pos][j] << endl;
+        // if(rank == proc_of_interest) cout << "in Clusters line: 92" << " m_pts_outer->m_points[pos][j]: " << m_pts_outer->m_points[pos][j] << endl;
       }
       // assign the cluster ID for the point
       m_pts_outer->m_prIDs[pos] = source; // TODO check that source is a cluster ID
@@ -107,7 +107,7 @@ namespace NWUClustering {
   bool Clusters::updatePoints(vector< vector<int> >& raw_ind) {
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if(rank == proc_of_interest) cout << "in Clusters line: 110" << " in Clusters::updatePoints" << endl;
+    // if(rank == proc_of_interest) cout << "in Clusters line: 110" << " in Clusters::updatePoints" << endl;
     // used as itterables
     int i, j = -1;
     // I believe these are cluster IDs
@@ -117,12 +117,12 @@ namespace NWUClustering {
     // loop over the Outer points, and update cluster IDs
     for(i = 0; i < m_pts_outer->m_i_num_points; i++) {
       source = m_pts_outer->m_prIDs[i];
-      if(rank == proc_of_interest) cout << "in Clusters line: 120" << " source: " << source << endl;
+      // if(rank == proc_of_interest) cout << "in Clusters line: 120" << " source: " << source << endl;
       if(source != prev_source)
         j = 0;
 
       m_pts_outer->m_ind[i] = raw_ind[source][j++];
-      if(rank == proc_of_interest) cout << "in Clusters line: 125" << " m_pts_outer->m_ind[i]: " << m_pts_outer->m_ind[i] << endl;
+      // if(rank == proc_of_interest) cout << "in Clusters line: 125" << " m_pts_outer->m_ind[i]: " << m_pts_outer->m_ind[i] << endl;
       prev_source = source;
     }
 
@@ -148,7 +148,7 @@ namespace NWUClustering {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     // Get the total number of nodes in the system
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
-    if(rank == proc_of_interest) cout << "in Clusters line: 151" << " in Clusters::read_file" << endl;
+    // if(rank == proc_of_interest) cout << "in Clusters line: 151" << " in Clusters::read_file" << endl;
     // only supports binary data file
     if(isBinaryFile == 1) {
       // NOTE: the input data points are equally partioned and each core read their corresponding part
@@ -162,7 +162,7 @@ namespace NWUClustering {
         file.read((char*)&dims, sizeof(int));
 
         // #ifdef _DEBUG 
-        if(rank == proc_of_interest) cout << "in Clusters line: 165" << "Points: " << num_points << " dims: " << dims << endl;
+        // if(rank == proc_of_interest) cout << "in Clusters line: 165" << "Points: " << num_points << " dims: " << dims << endl;
         // #endif
 
         // compute the respective segments of the file to read.
@@ -178,8 +178,8 @@ namespace NWUClustering {
 
         // #ifdef _DEBUG
         if(rank == proc_of_interest) {
-          cout << "in Clusters line: 181 Segment size: " << sch << endl;
-          cout << "in Clusters line: 182 Points per process on average: " << num_points/nproc << endl;
+          // cout << "in Clusters line: 181 Segment size: " << sch << endl;
+          // cout << "in Clusters line: 182 Points per process on average: " << num_points/nproc << endl;
         }
         // #endif
 
@@ -190,8 +190,8 @@ namespace NWUClustering {
           upper = num_points;
         
         if(rank == proc_of_interest) {
-          cout << "in Clusters line: 193" << " upper: " << upper << endl;
-          cout << "in Clusters line: 194" << " lower: " << lower << endl;
+          // cout << "in Clusters line: 193" << " upper: " << upper << endl;
+          // cout << "in Clusters line: 194" << " lower: " << lower << endl;
         }
         // allocate memory for points
         m_pts = new Points;
@@ -205,8 +205,8 @@ namespace NWUClustering {
         //allocate memory for the points
         //m_pts->m_points.resize(extents[num_points][dims]);
         //m_pts->m_points.resize(extents[m_pts->m_i_num_points][dims]);
-        if(rank == proc_of_interest) cout << "in Clusters line: 208 m_i_dims: " << m_pts->m_i_dims << endl;
-        if(rank == proc_of_interest) cout << "in Clusters line: 209 m_i_num_points: " << m_pts->m_i_num_points << endl;
+        // if(rank == proc_of_interest) cout << "in Clusters line: 208 m_i_dims: " << m_pts->m_i_dims << endl;
+        // if(rank == proc_of_interest) cout << "in Clusters line: 209 m_i_num_points: " << m_pts->m_i_num_points << endl;
 
         //allocate memory for the points
         m_pts->m_points.resize(m_pts->m_i_num_points);
@@ -229,7 +229,7 @@ namespace NWUClustering {
           
           for (j = 0; j < dims; j++) {
             m_pts->m_points[i][j] = pt[j];
-            if(rank == proc_of_interest) cout << "in Clusters line: 232 m_pts->m_points[i][j]: " << m_pts->m_points[i][j] << endl;
+            // if(rank == proc_of_interest) cout << "in Clusters line: 232 m_pts->m_points[i][j]: " << m_pts->m_points[i][j] << endl;
             if(i == 0) { 
               m_pts->m_box[j].upper = m_pts->m_points[i][j];
               m_pts->m_box[j].lower = m_pts->m_points[i][j];
@@ -239,8 +239,8 @@ namespace NWUClustering {
               else if(m_pts->m_box[j].upper < m_pts->m_points[i][j])
                 m_pts->m_box[j].upper = m_pts->m_points[i][j];
             }
-            if(rank == proc_of_interest) cout << "in Clusters line: 242 m_pts->m_box[j].lower: " << m_pts->m_box[j].lower << endl;
-            if(rank == proc_of_interest) cout << "in Clusters line: 243 m_pts->m_box[j].upper: " << m_pts->m_box[j].upper << endl;
+            // if(rank == proc_of_interest) cout << "in Clusters line: 242 m_pts->m_box[j].lower: " << m_pts->m_box[j].lower << endl;
+            // if(rank == proc_of_interest) cout << "in Clusters line: 243 m_pts->m_box[j].upper: " << m_pts->m_box[j].upper << endl;
           }
         }
 
@@ -263,7 +263,7 @@ namespace NWUClustering {
   int Clusters::build_kdtree() {
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if(rank == proc_of_interest) cout << "in Clusters line: 266 " << " in Clusters::build_kdtree" << endl;
+    // if(rank == proc_of_interest) cout << "in Clusters line: 266 " << " in Clusters::build_kdtree" << endl;
     // if the Point objects weren't created, don't bother going further...
     if(m_pts == NULL) {
       cout << "Point set is empty" << endl;
@@ -284,7 +284,7 @@ namespace NWUClustering {
   int Clusters::build_kdtree_outer() {
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if(rank == proc_of_interest) cout << "in Clusters line: 287 " << " in Clusters::build_kdtree_outer" << endl;
+    // if(rank == proc_of_interest) cout << "in Clusters line: 287 " << " in Clusters::build_kdtree_outer" << endl;
     if(m_pts_outer == NULL) {
       cout << "Outer point set is empty" << endl;
       return -1;
