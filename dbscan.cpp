@@ -33,17 +33,17 @@ namespace NWUClustering {
   void ClusteringAlgo::set_dbscan_params(double eps, int minPts) {
     int rank; 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-    // if(rank == proc_of_interest) cout << "in dbscan line: 36" << " in ClusteringAlgo::set_dbscan_params" << endl;
+    
     m_epsSquare =  eps * eps;
     m_minPts =  minPts;
     m_messages_per_round = -1; // always -1
     m_compression = 0; // can set to 1 if want to compress specailly in the first round of communication
-    // if(rank == proc_of_interest) cout << "in dbscan line: 41" << " eps: " << eps << endl;
-    // if(rank == proc_of_interest) cout << "in dbscan line: 42" << " minPts: " << minPts << endl;
-    // if(rank == proc_of_interest) cout << "in dbscan line: 43" << " m_epsSquare: " << m_epsSquare << endl;
-    // if(rank == proc_of_interest) cout << "in dbscan line: 44" << " m_minPts: " << m_minPts << endl;
-    // if(rank == proc_of_interest) cout << "in dbscan line: 45" << " m_messages_per_round: " << m_messages_per_round << endl;
-    // if(rank == proc_of_interest) cout << "in dbscan line: 46" << " m_compression: " << m_compression << endl;
+    
+
+
+
+
+
   }
 
   // Destructor
@@ -66,14 +66,14 @@ namespace NWUClustering {
     double start = MPI_Wtime();
     int irank; 
     MPI_Comm_rank(MPI_COMM_WORLD, &irank); 
-    // if(irank == proc_of_interest) cout << "in dbscan line: 69" << " in ClusteringAlgo::trivial_decompression" << endl;
+    
     vector <int> parser;
     // allocates a MINIMUM amount of memory, the size of 'data'
     parser.reserve((*data).size());
     // assign "data" to another variable
-    // parser = (*data); if(irank == proc_of_interest) cout << "in dbscan line: 74" << " copying parser = (*data);" << endl;
+    // parser = (*data); 
     // removes all elements, destroying them. The size becomes 0.
-    // (*data).clear(); if(irank == proc_of_interest) cout << "in dbscan line: 76" << " clearing (*data).clear();" << endl;
+    // (*data).clear(); 
     // declaring an INT automatically initializes it to 0...
     int pid_count = parser[0], pos, i, j, pid, npid, npid_count;
     // if(rank == proc_of_interest) cout << "in dbscan line: 79" << " pid_count: " << pid_count << endl;
@@ -111,11 +111,11 @@ namespace NWUClustering {
     int pairs, pid, npid, i, j, pid_count, npid_count;
     int irank; 
     MPI_Comm_rank(MPI_COMM_WORLD, &irank); //if(irank == proc_of_interest) cout << "in dbscan line: 113" << " in ClusteringAlgo::trivial_compression" << endl;
-    // if(irank == proc_of_interest) cout << "in dbscan line: 114" << " nproc: " << nproc << endl;
-    // if(irank == proc_of_interest) cout << "in dbscan line: 115" << " rank: " << rank << endl;
-    // if(irank == proc_of_interest) cout << "in dbscan line: 116" << " round: " << round << endl;
-    // if(irank == proc_of_interest) cout << "in dbscan line: 117" << " comtime: " << comtime << endl;
-    // if(irank == proc_of_interest) cout << "in dbscan line: 118" << " sum_comp_rate: " << sum_comp_rate << endl;
+    
+
+
+
+
     // The number of "pairs" in the "data" vector
     pairs = (*data).size()/2; // TODO this must be why the data must be a factor of 2???
     // if(irank == proc_of_interest) cout << "in dbscan line: 121" << " pairs: " << pairs << endl;
@@ -257,7 +257,7 @@ namespace NWUClustering {
     int rank, nproc, i;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
-    // if(rank == proc_of_interest) cout << "in dbscan line: 260" << " in ClusteringAlgo::get_clusters_distributed" << endl;
+    cout << "in dbscan rank: " << rank << " line: 260 in ClusteringAlgo::get_clusters_distributed" << endl;
     // get the root all the local points first
     // store in a message buffer in case need to ask other processors
 
@@ -271,7 +271,7 @@ namespace NWUClustering {
     merge_send1.resize(nproc, init);
     merge_send2.resize(nproc, init);
 
-    int pid;
+    int pid; // process ID???
     // loop over the other dimensions of the vectors, 
       // resizing them to the minimum length of the number of points that 'm_pts' has.
     for(pid = 0; pid < nproc; pid++) {
@@ -291,8 +291,8 @@ namespace NWUClustering {
     // if(rank == proc_of_interest) cout << "in dbscan line: 291" << " p_cur_send: " << p_cur_send << endl;
     // if(rank == proc_of_interest) cout << "in dbscan line: 292" << " p_cur_insert: " << p_cur_insert << endl;
     // I don't know why reserve() and resize() are called together???
-    m_child_count.reserve(m_pts->m_i_num_points);
-    m_child_count.resize(m_pts->m_i_num_points, 0);   
+    m_child_count.resize(m_pts->m_i_num_points, 0); 
+    m_child_count.reserve(m_pts->m_i_num_points);  
     // if(rank == proc_of_interest) cout << "in dbscan line: 296" << " m_pts->m_i_num_points: " << m_pts->m_i_num_points << endl;
     int root, local_continue_to_run = 0, global_continue_to_run;
     // loop over the points
@@ -328,7 +328,7 @@ namespace NWUClustering {
         // if(rank == proc_of_interest) cout << "in dbscan line: 328" << " m_parents[root]: " << m_parents[root] << endl;
         // if(rank == proc_of_interest) cout << "in dbscan line: 329" << " i: " << i << endl;
         // if(rank == proc_of_interest) cout << "in dbscan line: 330" << " rank: " << rank << endl;
-        if(rank == proc_of_interest) cout << "in dbscan line: 331" << " local_continue_to_run: " << local_continue_to_run << endl;
+        // if(rank == proc_of_interest) cout << "in dbscan line: 331" << " local_continue_to_run: " << local_continue_to_run << endl;
       }     
     }
     
@@ -338,16 +338,16 @@ namespace NWUClustering {
     int pos, round = 0, quadraples, scount, tid, tag = 0, rtag, rsource, rcount, isend[nproc], irecv[nproc], flag;
     // TODO change to malloc() for each of the arrays...
     MPI_Request s_req_recv[nproc], s_req_send[nproc], d_req_send[nproc], d_req_recv[nproc]; // better to malloc the memory
-    MPI_Status  s_stat, d_stat_send[nproc], d_stat;
+    MPI_Status  d_stat_send[nproc], d_stat; // d_stat_send[nproc]: for MPI_Waitall; d_stat: for MPI_Waitany
     int target_point, source_point, source_pr;
     // if(rank == proc_of_interest) cout << "in dbscan line: 343" << " Start communications..." << endl;
     while(1) {
-      global_continue_to_run = 0; if(rank == proc_of_interest) cout << "in dbscan line: 345" << " pre MPI_Allreduce local_continue_to_run: " << local_continue_to_run << endl;
+      global_continue_to_run = 0; // if(rank == proc_of_interest) cout << "in dbscan line: 345" << " pre MPI_Allreduce local_continue_to_run: " << local_continue_to_run << endl;
       // Combines values from all processes and distributes the result back to all processes
       MPI_Allreduce(&local_continue_to_run, &global_continue_to_run, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
       // if(rank == proc_of_interest) cout << "in dbscan line: 348" << " calling MPI_Allreduce()" << endl;
-      if(rank == proc_of_interest) cout << "in dbscan line: 349" << " post MPI_Allreduce local_continue_to_run: " << local_continue_to_run << endl;
-      if(rank == proc_of_interest) cout << "in dbscan line: 350" << " post MPI_Allreduce global_continue_to_run: " << global_continue_to_run << endl;
+      // if(rank == proc_of_interest) cout << "in dbscan line: 349" << " post MPI_Allreduce local_continue_to_run: " << local_continue_to_run << endl;
+      // if(rank == proc_of_interest) cout << "in dbscan line: 350" << " post MPI_Allreduce global_continue_to_run: " << global_continue_to_run << endl;
       if(global_continue_to_run == 0)
         break;
       // bubble sort operation
@@ -370,9 +370,9 @@ namespace NWUClustering {
         }
       }
       // TODO need a MPI_Wait()
-      if(rank == proc_of_interest) cout << "in dbscan line: 373" << " isend[0]: " << isend[0] << endl;
+      // if(rank == proc_of_interest) cout << "in dbscan line: 373" << " isend[0]: " << isend[0] << endl;
       MPI_Alltoall(&isend[0], 1, MPI_INT, &irecv[0], 1, MPI_INT, MPI_COMM_WORLD);
-      if(rank == proc_of_interest) cout << "in dbscan line: 375" << " post MPI_Alltoall isend[0]: " << isend[0] << endl;
+      // if(rank == proc_of_interest) cout << "in dbscan line: 375" << " post MPI_Alltoall isend[0]: " << isend[0] << endl;
       rcount = 0;
       for(tid = 0; tid < nproc; tid++) {
         if(irecv[tid] > 0) {
@@ -381,16 +381,16 @@ namespace NWUClustering {
           MPI_Irecv(&merge_received[tid][0], irecv[tid], MPI_INT, tid, tag + 1, MPI_COMM_WORLD, &d_req_recv[rcount]);
           rcount++;
           // if(rank == proc_of_interest) cout << "in dbscan line: 383" << " irecv[tid]: " << irecv[tid] << endl;
-          if(rank == proc_of_interest) cout << "in dbscan line: 384" << " rcount: " << rcount << endl;
+          // if(rank == proc_of_interest) cout << "in dbscan line: 384" << " rcount: " << rcount << endl;
         }
       }
 
       local_continue_to_run = 0;
       // loop over the received messages
       for(tid = 0; tid < rcount; tid++) {
-        // wait for any replay
+        // Waits for any specified send or receive to complete. int MPI_Waitany(int count, MPI_Request array_of_requests[], int *index, MPI_Status *status)
         MPI_Waitany(rcount, &d_req_recv[0], &pos, &d_stat);
-        if(rank == proc_of_interest) cout << "in dbscan line: 393" << " rcount: " << rcount << endl;
+        // if(rank == proc_of_interest) cout << "in dbscan line: 393" << " rcount: " << rcount << endl;
         // if(rank == proc_of_interest) cout << "in dbscan line: 394" << " d_req_recv[0]: " << d_req_recv[0] << endl;
         // if(rank == proc_of_interest) cout << "in dbscan line: 395" << " pos: " << pos << endl;
         rtag = d_stat.MPI_TAG;
@@ -447,7 +447,7 @@ namespace NWUClustering {
                 (*p_cur_insert)[m_parents_pr[root]].push_back(source_pr);
                 local_continue_to_run++;
               }
-              if(rank == proc_of_interest) cout << "in dbscan line: 450" << " local_continue_to_run: " << local_continue_to_run << endl;
+              // if(rank == proc_of_interest) cout << "in dbscan line: 450" << " local_continue_to_run: " << local_continue_to_run << endl;
             } else {
               // got a reply, so just set the parent
               m_parents[target_point] = source_point;
@@ -482,45 +482,45 @@ namespace NWUClustering {
         // if(rank == proc_of_interest) cout << "in dbscan line: 482" << " points_in_cluster_final: " << points_in_cluster_final << endl;
         // if(rank == proc_of_interest) cout << "in dbscan line: 483" << " final_cluster_root: " << final_cluster_root << endl;
       }
-    }
-    if(rank == proc_of_interest) cout << "in dbscan line: 486" << " points_in_cluster_final: " << points_in_cluster_final << " final_cluster_root: " << final_cluster_root << endl;
+    } //int MPI_Allreduce(const void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm)
+    cout << "rank: " << rank << " in dbscan line: 486" << " points_in_cluster_final: " << points_in_cluster_final << " final_cluster_root: " << final_cluster_root << endl;
     MPI_Allreduce(&points_in_cluster_final, &total_points_in_cluster_final, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(&final_cluster_root, &total_final_cluster_root, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-    if(rank == proc_of_interest) cout << "in dbscan line: 489" << " post MPI_Allreduce points_in_cluster_final: " << points_in_cluster_final << " final_cluster_root: " << final_cluster_root << endl;
+    cout << "rank: " << rank << " in dbscan line: 489" << " post MPI_Allreduce points_in_cluster_final: " << points_in_cluster_final << " final_cluster_root: " << final_cluster_root << " total_points_in_cluster_final: " << total_points_in_cluster_final << " total_final_cluster_root: " << total_final_cluster_root << endl;
     int total_points = 0;
     MPI_Allreduce(&m_pts->m_i_num_points, &total_points, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-
+    // Combines values from all processes and distributes the result back to all processes.
     if(rank == proc_of_interest) cout << "Points in clusters " << total_points_in_cluster_final << " Noise " << (total_points - total_points_in_cluster_final) << " Total points " << total_points << endl;
-
+    if(rank != proc_of_interest) cout << "in dbscan line: 494 rank: " << rank << " Points in clusters " << total_points_in_cluster_final << " Noise " << (total_points - total_points_in_cluster_final) << " Total points " << total_points << endl;
     if(rank == proc_of_interest) cout << "Total number of clusters " << total_final_cluster_root << endl;
-
+    if(rank != proc_of_interest) cout << "in dbscan line: 496 rank: " << rank << " Total number of clusters " << total_final_cluster_root << endl;
     vector<int> global_roots;
     global_roots.resize(nproc, 0);
-    // Gathers data from all processes
+    // Gathers data from all processes and distributes it to all processes. int MPI_Allgather(const void *sendbuf, int  sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm)
     MPI_Allgather(&final_cluster_root, sizeof(int), MPI_BYTE, &global_roots[0], sizeof(int), MPI_BYTE, MPI_COMM_WORLD); 
-    if(rank == proc_of_interest) cout << "in dbscan line: 501" << " post MPI_Allgather final_cluster_root: " << final_cluster_root << endl;
-
+    if(rank == proc_of_interest) cout << "in dbscan line: 501" << " post MPI_Allgather final_cluster_root: " << final_cluster_root << " global_roots[0]: " << global_roots[0]  << endl;
+    if(rank != proc_of_interest) cout << "in dbscan line: 502 rank: " << rank << " post MPI_Allgather final_cluster_root: " << final_cluster_root << " global_roots[0]: " << global_roots[0]  << endl;
     int cluster_offset = 0;
 
     for(i = 0; i <= rank; i++) {
       cluster_offset += global_roots[i];
-      // if(rank == proc_of_interest) cout << "in dbscan line: 507 cluster_offset: " << cluster_offset << endl;
+      cout << "in dbscan rank: " << rank << " line: 507 i: " << i << " cluster_offset: " << cluster_offset << " global_roots[i]: " << global_roots[i] << endl;
     }
-
+    cout << "in dbscan rank: " << rank << " line: 509 i: " << i << " cluster_offset: " << cluster_offset << endl;
     m_pid_to_cid.clear();
     m_pid_to_cid.resize(m_pts->m_i_num_points, -1);
-    // if(rank == proc_of_interest) cout << "in dbscan line: 512 m_pts->m_i_num_points: " << m_pts->m_i_num_points << endl;
+    cout << "in dbscan rank: " << rank << " line: 512 m_pts->m_i_num_points: " << m_pts->m_i_num_points << endl;
     // assign for the global roots only
     for(i = 0; i < m_pts->m_i_num_points; i++) {
       if(m_parents[i] == i && m_parents_pr[i] == rank) {
         if(m_child_count[i] > 1) {
           m_pid_to_cid[i] = cluster_offset;
           cluster_offset++;
-          // if(rank == proc_of_interest) cout << "in dbscan line: 519 m_pid_to_cid[i]: " << m_pid_to_cid[i] << endl;
-          // if(rank == proc_of_interest) cout << "in dbscan line: 520 cluster_offset: " << cluster_offset << endl;
+          cout << "in dbscan rank: " << rank << " line: 519 m_pid_to_cid[i]: " << m_pid_to_cid[i] << endl;
+          cout << "in dbscan rank: " << rank << " line: 520 cluster_offset: " << cluster_offset << endl;
         } else {
           m_pid_to_cid[i] = 0; // noise point
-          // if(rank == proc_of_interest) cout << "in dbscan line: 523 noise point: " << i << endl;
+          cout << "in dbscan rank: " << rank << " line: 523 noise point: " << i << endl;
         }
       }
     }
@@ -564,7 +564,7 @@ namespace NWUClustering {
       // if(rank == proc_of_interest) cout << "in dbscan line: 564 scount: " << scount << endl;
       for(tid = 0; tid < nproc; tid++) {
         isend[tid] = (*p_cur_send)[tid].size();
-        if(rank == proc_of_interest) cout << "in dbscan line: 567 isend[tid]: " << isend[tid] << endl;
+        // if(rank == proc_of_interest) cout << "in dbscan line: 567 isend[tid]: " << isend[tid] << endl;
         if(isend[tid] > 0) {
           MPI_Isend(&(*p_cur_send)[tid][0], isend[tid], MPI_INT, tid, tag + 1, MPI_COMM_WORLD, &d_req_send[scount]);
           scount++;
@@ -573,7 +573,7 @@ namespace NWUClustering {
       }
       // TODO need a MPI_Wait()
       MPI_Alltoall(&isend[0], 1, MPI_INT, &irecv[0], 1, MPI_INT, MPI_COMM_WORLD);
-      if(rank == proc_of_interest) cout << "in dbscan line: 576 isend[0]: " << isend[0] << endl;
+      // if(rank == proc_of_interest) cout << "in dbscan line: 576 isend[0]: " << isend[0] << endl;
       rcount = 0;
       for(tid = 0; tid < nproc; tid++) {
         if(irecv[tid] > 0) {
@@ -962,7 +962,7 @@ namespace NWUClustering {
     i = 0;
       
     MPI_Request s_req_recv[nproc], s_req_send[nproc], d_req_send[nproc], d_req_recv[nproc]; // better to malloc the memory
-    MPI_Status  s_stat, d_stat_send[nproc], d_stat;
+    MPI_Status  d_stat_send[nproc], d_stat;
 
     start = MPI_Wtime();
 
