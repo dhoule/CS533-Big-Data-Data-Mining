@@ -198,7 +198,7 @@ namespace NWUClustering {
         m_pts->m_i_dims = dims; // number of dimensions/attributes
         m_pts->m_i_num_points = upper - lower; // the number of points
 
-        // interval struct defined in kdtree2.h
+        // interval struct defined in kdtree2.hpp
           // m_box, is of type interval*
         m_pts->m_box = new interval[m_pts->m_i_dims]; 
 
