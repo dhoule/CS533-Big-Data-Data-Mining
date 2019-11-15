@@ -72,7 +72,7 @@ namespace NWUClustering {
     pos = m_pts_outer->m_i_num_points;
     m_pts_outer->m_i_num_points += num_points;
     //m_pts_outer->m_points.resize(extents[m_pts_outer->m_i_num_points][dims]);
-    // if(rank == proc_of_interest) cout << "in Clusters line: 75" << " m_pts_outer->m_i_num_points: " << m_pts_outer->m_i_num_points << endl;
+    //cout << "rank: " << rank << " in Clusters line: 75" << " m_pts_outer->m_i_num_points: " << m_pts_outer->m_i_num_points << " num_points: " << num_points << endl;
     //allocate memory for the points
       // resize() - Resizes the container so that it contains n elements
     m_pts_outer->m_points.resize(m_pts_outer->m_i_num_points);
@@ -197,7 +197,7 @@ namespace NWUClustering {
         m_pts = new Points;
         m_pts->m_i_dims = dims; // number of dimensions/attributes
         m_pts->m_i_num_points = upper - lower; // the number of points
-
+        //cout << "rank: " << rank << " in Clusters line: 200" << " m_pts->m_i_num_points: " << m_pts->m_i_num_points << endl;
         // interval struct defined in kdtree2.hpp
           // m_box, is of type interval*
         m_pts->m_box = new interval[m_pts->m_i_dims]; 
