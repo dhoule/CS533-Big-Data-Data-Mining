@@ -41,7 +41,7 @@ static void usage(char *argv0) {
   exit(-1);
 }
 
-
+// TODO splicing compression technique, using "Rem's union-find technique": https://algocoding.wordpress.com/2015/05/13/simple-union-find-techniques/#more-1395
 int main(int argc, char** argv) {
   double  seconds;
   int   opt;
