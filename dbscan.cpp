@@ -38,13 +38,17 @@ namespace NWUClustering {
     m_minPts =  minPts;
     m_messages_per_round = -1; // always -1
     m_compression = 0; // can set to 1 if want to compress specailly in the first round of communication
+  }
+    
+
+
+    
     
 
 
 
 
 
-  }
 
   // Destructor
   ClusteringAlgo::~ClusteringAlgo() {
@@ -53,7 +57,6 @@ namespace NWUClustering {
     m_parents.clear();
     m_parents_pr.clear();
     m_child_count.clear();
-
     m_corepoint.clear();
     m_member.clear();
   }
@@ -70,13 +73,10 @@ namespace NWUClustering {
     vector <int> parser;
     // allocates a MINIMUM amount of memory, the size of 'data'
     parser.reserve((*data).size());
-    // assign "data" to another variable
-    // parser = (*data); 
-    // removes all elements, destroying them. The size becomes 0.
-    // (*data).clear(); 
-    // declaring an INT automatically initializes it to 0...
+
+    // declaring an INT automatically initializes it to 0... I believe the same goes for Vector objects as well
     int pid_count = parser[0], pos, i, j, pid, npid, npid_count;
-    // if(rank == proc_of_interest) cout << "in dbscan line: 79" << " pid_count: " << pid_count << endl;
+    
     pos++;// the value becomes 1
     // TODO I have no idea what this does. Need to have outputs to determine what is going on;
       // besides rebuilding the 'data' variable
@@ -103,6 +103,8 @@ namespace NWUClustering {
     dcomtime += (stop - start);
   }
   
+
+
   // called in run_dbscan_algo_uf_mpi_interleaved()
   void ClusteringAlgo::trivial_compression(vector <int>* data, vector < vector <int> >* parser, int nproc, int rank, int round, double& comtime, double& sum_comp_rate) {
     // get the starting time before doing anything in this function
@@ -111,10 +113,6 @@ namespace NWUClustering {
     int pairs, pid, npid, i, j, pid_count, npid_count;
     int irank; 
     MPI_Comm_rank(MPI_COMM_WORLD, &irank); //if(irank == proc_of_interest) cout << "in dbscan line: 113" << " in ClusteringAlgo::trivial_compression" << endl;
-    
-
-
-
 
     // The number of "pairs" in the "data" vector
     pairs = (*data).size()/2; // TODO this must be why the data must be a factor of 2???
@@ -135,7 +133,7 @@ namespace NWUClustering {
     // inititalize 'pid_count' to 0, and add it to the back of the 'data' vector
     pid_count = 0;
     (*data).push_back(pid_count); // uniques pids, should update later
-    // 'm_pts' is the current cluster's struct object???
+    // 'm_pts' is the current cluster's struct object. Initialized in clusters.cpp read_file().
     // Loop rebuilds the 'data' vector and clears out dimensions of the 'parser' vector
     // if(irank == proc_of_interest) cout << "in dbscan line: 140" << " m_pts->m_i_num_points: " << m_pts->m_i_num_points << endl;
     for(i = 0; i < m_pts->m_i_num_points; i++) {
@@ -257,300 +255,300 @@ namespace NWUClustering {
     int rank, nproc, i;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
-    cout << "in dbscan rank: " << rank << " line: 260 in ClusteringAlgo::get_clusters_distributed" << endl;
-    // get the root all the local points first
-    // store in a message buffer in case need to ask other processors
+    
+    /* 
+      get the root all the local points first
+      store in a message buffer in case need to ask other processors
+    */
 
     vector < vector <int > > merge_received;
     vector < vector <int > > merge_send1;
     vector < vector <int > > merge_send2;
     vector <int> init;
     // resize the vectors to the size of the number of nodes,
-      // initialized with the value of the 'init' vector.
-    merge_received.resize(nproc, init);
+      //the new elements are initialized as copies of val; init; otherwise, they are value-initialized.
+    merge_received.resize(nproc, init); 
     merge_send1.resize(nproc, init);
-    merge_send2.resize(nproc, init);
+    merge_send2.resize(nproc, init); 
+    init.clear(); // clear the unused variable ASAP
 
     int pid; // process ID???
     // loop over the other dimensions of the vectors, 
       // resizing them to the minimum length of the number of points that 'm_pts' has.
     for(pid = 0; pid < nproc; pid++) {
-      // if(rank == proc_of_interest) cout << "in dbscan line: 278" << " pid: " << pid << endl;
       merge_received[pid].reserve(m_pts->m_i_num_points);
       merge_send1[pid].reserve(m_pts->m_i_num_points);
       merge_send2[pid].reserve(m_pts->m_i_num_points);
     }
-    // These vectors, together, seems to be used to perform a bubble sort type of operation
+    // These vectors, together, seem to be used to perform a bubble sort type of operation
       // 'p_cur_send' and 'p_cur_insert' have actual uses.
     vector < vector <int > >* pswap;
     vector < vector <int > >* p_cur_send;
     vector < vector <int > >* p_cur_insert;
-    // assign pointers???
-    p_cur_send = &merge_send1;
-    p_cur_insert = &merge_send2;
-    // if(rank == proc_of_interest) cout << "in dbscan line: 291" << " p_cur_send: " << p_cur_send << endl;
-    // if(rank == proc_of_interest) cout << "in dbscan line: 292" << " p_cur_insert: " << p_cur_insert << endl;
-    // I don't know why reserve() and resize() are called together???
+    // assign the memory addresses of the variables???
+    p_cur_send = &merge_send1; // TODO merge_send1 is only used for this purpose
+    p_cur_insert = &merge_send2; // TODO merge_send2 is only used for this purpose
+    // cannot clear `merge_send1` OR `merge_send2`, as the & gives the "address of". This seems stupid, as it just renames variables
+    // `m_child_count` is declared in dbscan.h
+    // TODO I don't know why reserve() and resize() are called together???
     m_child_count.resize(m_pts->m_i_num_points, 0); 
     m_child_count.reserve(m_pts->m_i_num_points);  
-    // if(rank == proc_of_interest) cout << "in dbscan line: 296" << " m_pts->m_i_num_points: " << m_pts->m_i_num_points << endl;
+    
     int root, local_continue_to_run = 0, global_continue_to_run;
-    // loop over the points
+    
+    /*
+     loop over the points
+    */
     for(i = 0; i < m_pts->m_i_num_points; i++) {
       // find the point containing i
-      root = i;
-      // if(rank == proc_of_interest) cout << "in dbscan line: 302" << " root: " << root << endl;
+      root = i; // root is x in the paper
+      
       // continue the loop as long as the node's ID matches the parent's ID???
+      // TODO this while loop occures twice in this function.
+      // TODO move it to another function, passing it the starting value of `root` and return the found value of `root`
       while(m_parents_pr[root] == rank) {
-        if(m_parents[root] == root) {
-          // if(rank == proc_of_interest) cout << "in dbscan line: 306" << " root: " << root << endl;
+        if(m_parents[root] == root) { 
+          // tree root is satisfied: p(x) == x
           break;
         }
         root = m_parents[root];
-        // if(rank == proc_of_interest) cout << "in dbscan line: 310" << " root: " << root << endl;
       }
       
       if(m_parents[root] == root && m_parents_pr[root] == rank) { // root is a local root
-        // if(rank == proc_of_interest) cout << "in dbscan line: 314" << " m_parents[root] == root && m_parents_pr[root] == rank: TRUE" << endl;
         // set the root of i directly to root
-        m_parents[i] = root;
+        m_parents[i] = root; // creating a new set for each element x is acheived by setting p(x) to x
         m_child_count[root] = m_child_count[root] + 1; // increase the child count by one
-        // if(rank == proc_of_interest) cout << "in dbscan line: 318" << " m_parents[i]: " << m_parents[i] << endl;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 319" << " m_child_count[root]: " << m_child_count[root] << endl;
-        //m_parents_pr[i] = rank; // NO NEED TO SET THIS AS IT        
+        //m_parents_pr[i] = rank; // NO NEED TO SET THIS AS IT  TODO as it what??? Ans: it should already be in the current node
       } else {
         // set up info to request data from other nodes
         (*p_cur_insert)[m_parents_pr[root]].push_back(0); // flag: 0 means query and 1 means a reply
-        (*p_cur_insert)[m_parents_pr[root]].push_back(m_parents[root]);
-        (*p_cur_insert)[m_parents_pr[root]].push_back(i);
-        (*p_cur_insert)[m_parents_pr[root]].push_back(rank);
-        local_continue_to_run++;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 328" << " m_parents[root]: " << m_parents[root] << endl;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 329" << " i: " << i << endl;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 330" << " rank: " << rank << endl;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 331" << " local_continue_to_run: " << local_continue_to_run << endl;
+        (*p_cur_insert)[m_parents_pr[root]].push_back(m_parents[root]); // The point that belongs to another node
+        (*p_cur_insert)[m_parents_pr[root]].push_back(i); // the element index of that point
+        (*p_cur_insert)[m_parents_pr[root]].push_back(rank); // the MPI_SOURCE
+        local_continue_to_run++; // increase msg counter
       }     
     }
     
     // MAY BE REMOVED
     //MPI_Barrier(MPI_COMM_WORLD);
-    // TODO 'round' is the name of a function in C++. Might need to change it, just to be on the safe side.
-    int pos, round = 0, quadraples, scount, tid, tag = 0, rtag, rsource, rcount, isend[nproc], irecv[nproc], flag;
-    // TODO change to malloc() for each of the arrays...
+    int pos, quadraples, scount, tid, tag = 0, rtag, rsource, rcount, isend[nproc], irecv[nproc], flag;
+    // TODO Ask if malloc() is really needed in C++
     MPI_Request s_req_recv[nproc], s_req_send[nproc], d_req_send[nproc], d_req_recv[nproc]; // better to malloc the memory
     MPI_Status  d_stat_send[nproc], d_stat; // d_stat_send[nproc]: for MPI_Waitall; d_stat: for MPI_Waitany
     int target_point, source_point, source_pr;
-    // if(rank == proc_of_interest) cout << "in dbscan line: 343" << " Start communications..." << endl;
+    
     while(1) {
-      global_continue_to_run = 0; // if(rank == proc_of_interest) cout << "in dbscan line: 345" << " pre MPI_Allreduce local_continue_to_run: " << local_continue_to_run << endl;
+      global_continue_to_run = 0; // A flag to count the number of messages that still need to be passed
       // Combines values from all processes and distributes the result back to all processes
+      // int MPI_Allreduce(const void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm)
       MPI_Allreduce(&local_continue_to_run, &global_continue_to_run, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-      // if(rank == proc_of_interest) cout << "in dbscan line: 348" << " calling MPI_Allreduce()" << endl;
-      // if(rank == proc_of_interest) cout << "in dbscan line: 349" << " post MPI_Allreduce local_continue_to_run: " << local_continue_to_run << endl;
-      // if(rank == proc_of_interest) cout << "in dbscan line: 350" << " post MPI_Allreduce global_continue_to_run: " << global_continue_to_run << endl;
+      // All msg passing is done, break out of the loop
       if(global_continue_to_run == 0)
         break;
-      // bubble sort operation
+      // TODO bubble sort operation, that is somehow connected to Rem's union-find technique for Kruskal's Alg
       pswap = p_cur_insert;
       p_cur_insert = p_cur_send;
       p_cur_send = pswap;
-      // wipe out the current vectors of 'p_cur_insert'...
+      // wipe out the current vectors of `p_cur_insert`, because there are more msgs that need to be created
       for(tid = 0; tid < nproc; tid++)
         (*p_cur_insert)[tid].clear();
-  
+      // The number of msgs that were sent 
       scount = 0;
       // loop over the messages that need to be sent, and use a non-blocking operation
       for(tid = 0; tid < nproc; tid++) {
         isend[tid] = (*p_cur_send)[tid].size();
-        // if(rank == proc_of_interest) cout << "in dbscan line: 365" << " isend[tid]: " << isend[tid] << endl;
+        // if the intended node, has at least 1 msg to be sent to it
         if(isend[tid] > 0) {
+          /* 
+            Starts a standard-mode, nonblocking send
+            int MPI_Isend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request)
+          */  
           MPI_Isend(&(*p_cur_send)[tid][0], isend[tid], MPI_INT, tid, tag + 1, MPI_COMM_WORLD, &d_req_send[scount]);
           scount++;
-          // if(rank == proc_of_interest) cout << "in dbscan line: 365" << " scount: " << scount << endl;
         }
       }
-      // TODO need a MPI_Wait()
-      // if(rank == proc_of_interest) cout << "in dbscan line: 373" << " isend[0]: " << isend[0] << endl;
+      /*
+        All nodes exchange data about how many messages they sent to each other.
+        Each node calls MPI_Send() & MPI_Recv() for every node in the system, including itself.
+        All processes send data to all processes, blocking call.
+        int MPI_Alltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm)
+      */
       MPI_Alltoall(&isend[0], 1, MPI_INT, &irecv[0], 1, MPI_INT, MPI_COMM_WORLD);
-      // if(rank == proc_of_interest) cout << "in dbscan line: 375" << " post MPI_Alltoall isend[0]: " << isend[0] << endl;
+      
       rcount = 0;
       for(tid = 0; tid < nproc; tid++) {
         if(irecv[tid] > 0) {
           merge_received[tid].clear();
-          merge_received[tid].assign(irecv[tid], -1);
+          merge_received[tid].assign(irecv[tid], -1); // resize the vector and assign the values to -1
+          /*
+            TODO is this the corresponding Irecv() to the Isend() above???
+            Starts a standard-mode, nonblocking receive.
+            int MPI_Irecv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request)
+          */
           MPI_Irecv(&merge_received[tid][0], irecv[tid], MPI_INT, tid, tag + 1, MPI_COMM_WORLD, &d_req_recv[rcount]);
           rcount++;
-          // if(rank == proc_of_interest) cout << "in dbscan line: 383" << " irecv[tid]: " << irecv[tid] << endl;
-          // if(rank == proc_of_interest) cout << "in dbscan line: 384" << " rcount: " << rcount << endl;
         }
       }
-
+      // reset the counter for the number of sent local msgs
       local_continue_to_run = 0;
       // loop over the received messages
-      for(tid = 0; tid < rcount; tid++) {
-        // Waits for any specified send or receive to complete. int MPI_Waitany(int count, MPI_Request array_of_requests[], int *index, MPI_Status *status)
+      for(tid = 0; tid < rcount; tid++) { 
+        // Waits for any specified send or receive to complete. 
+        // int MPI_Waitany(int count, MPI_Request array_of_requests[], int *index, MPI_Status *status)
         MPI_Waitany(rcount, &d_req_recv[0], &pos, &d_stat);
-        // if(rank == proc_of_interest) cout << "in dbscan line: 393" << " rcount: " << rcount << endl;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 394" << " d_req_recv[0]: " << d_req_recv[0] << endl;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 395" << " pos: " << pos << endl;
+        // Need to get the tag and the source of the msg
         rtag = d_stat.MPI_TAG;
         rsource = d_stat.MPI_SOURCE;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 398" << " rtag: " << rtag << endl;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 399" << " rsource: " << rsource << endl;
-        // 'tag' is incremented after this loop
+        // determine if the tag received is the same as the tag sent
         if(rtag == tag + 1) {
-          // TODO find out the purpose of dividing by 4
-          quadraples = merge_received[rsource].size()/4;
-          // if(rank == proc_of_interest) cout << "in dbscan line: 404" << " quadraples: " << quadraples << endl;
+          quadraples = merge_received[rsource].size()/4; // divided by 4 because of how `(*p_cur_insert)` is built
+          // `pid` is just a simple counter and not used for anything else, in this scope
           for(pid = 0; pid < quadraples; pid++) {
-            // TODO - this is dependent on the elements being in the correct order!!!
-            // get the quadraple
-            // back() returns the last element of the vector
+            /* 
+              get the quadraple
+              back() returns the last element of the vector
+              pop_back() removes the last element of the vector
+              Need to get the last value of the vector, then discard it to move onto the next
+            */
             source_pr = merge_received[rsource].back();
-            // pop_back() removes the last element of the vector
             merge_received[rsource].pop_back();
-            // if(rank == proc_of_interest) cout << "in dbscan line: 412" << " source_pr: " << source_pr << endl;
             source_point = merge_received[rsource].back();
             merge_received[rsource].pop_back();
-            // if(rank == proc_of_interest) cout << "in dbscan line: 415" << " source_point: " << source_point << endl;
             target_point = merge_received[rsource].back();
             merge_received[rsource].pop_back();
-            // if(rank == proc_of_interest) cout << "in dbscan line: 418" << " target_point: " << target_point << endl;
             flag = merge_received[rsource].back();
             merge_received[rsource].pop_back();
-            // if(rank == proc_of_interest) cout << "in dbscan line: 418" << " flag: " << flag << endl;
-            if(flag == 0) {    
+            
+            if(flag == 0) { // flag: 0 means query and 1 means a reply 
               root = target_point;
-              // if(rank == proc_of_interest) cout << "in dbscan line: 424" << " root: " << root << endl;
-              // if(rank == proc_of_interest) cout << "in dbscan line: 425" << " m_parents_pr[root]: " << m_parents_pr[root] << endl;
+              // Need to move up the minimum spanning tree, to find the current root pt
+              // TODO this while loop occures twice in this function.
+              // TODO move it to another function, passing it the starting value of `root` and return the found value of `root`
               while(m_parents_pr[root] == rank) {
+                // when the root pt is found, break out of the loop
                 if(m_parents[root] == root)
                   break;
                 root = m_parents[root];
-                // if(rank == proc_of_interest) cout << "in dbscan line: 430" << " root: " << root << endl;
               }
-              // if(rank == proc_of_interest) cout << "in dbscan line: 432" << " m_parents[root] == root && m_parents_pr[root] == rank: " << (m_parents[root] == root && m_parents_pr[root] == rank) << endl;
               if(m_parents[root] == root && m_parents_pr[root] == rank) { // root is a local root
-              
+                // have to return the child pt to the node it belongs to
                 m_child_count[root] = m_child_count[root] + 1; // increase the child count by one
-                // have to return the child about root
-                // if(rank == proc_of_interest) cout << "in dbscan line: 437" << " m_child_count[root]: " << m_child_count[root] << endl;
-                (*p_cur_insert)[source_pr].push_back(1);
-                (*p_cur_insert)[source_pr].push_back(source_point);
-                (*p_cur_insert)[source_pr].push_back(m_parents[root]);
-                (*p_cur_insert)[source_pr].push_back(m_parents_pr[root]);
+                
+                (*p_cur_insert)[source_pr].push_back(1); // flag: 0 means query and 1 means a reply
+                (*p_cur_insert)[source_pr].push_back(source_point); // the element index of that point
+                (*p_cur_insert)[source_pr].push_back(m_parents[root]); // The root of the tree
+                (*p_cur_insert)[source_pr].push_back(m_parents_pr[root]); // The node the point belongs to
                 local_continue_to_run++;
               } else {
-                (*p_cur_insert)[m_parents_pr[root]].push_back(0);
-                (*p_cur_insert)[m_parents_pr[root]].push_back(m_parents[root]);
-                (*p_cur_insert)[m_parents_pr[root]].push_back(source_point);
-                (*p_cur_insert)[m_parents_pr[root]].push_back(source_pr);
+                // Still need to request more info about the pt from the node
+                (*p_cur_insert)[m_parents_pr[root]].push_back(0); // flag: 0 means query and 1 means a reply
+                (*p_cur_insert)[m_parents_pr[root]].push_back(m_parents[root]); // The root of the tree
+                (*p_cur_insert)[m_parents_pr[root]].push_back(source_point); // the element index of that point
+                (*p_cur_insert)[m_parents_pr[root]].push_back(source_pr); // The node the point belongs to
                 local_continue_to_run++;
               }
-              // if(rank == proc_of_interest) cout << "in dbscan line: 450" << " local_continue_to_run: " << local_continue_to_run << endl;
             } else {
               // got a reply, so just set the parent
-              m_parents[target_point] = source_point;
-              m_parents_pr[target_point] = source_pr;
-              // if(rank == proc_of_interest) cout << "in dbscan line: 455" << " m_parents[target_point]: " << m_parents[target_point] << endl;
-              // if(rank == proc_of_interest) cout << "in dbscan line: 456" << " m_parents_pr[target_point]: " << m_parents_pr[target_point] << endl;
+              m_parents[target_point] = source_point; // The root of the minimum spanning tree
+              m_parents_pr[target_point] = source_pr; // The node the point belongs to
             }
           }
         }
       }
 
-      tag++;
-      // if(rank == proc_of_interest) cout << "in dbscan line: 463" << " tag: " << tag << endl;
-      round++;
-      // if(rank == proc_of_interest) cout << "in dbscan line: 465" << " round: " << round << endl;
-      // if(rank == proc_of_interest) cout << "in dbscan line: 466" << " scount: " << scount << endl;
-      if(scount > 0)
+      tag++; // increment `tag` for the next msg set
+      if(scount > 0) //  TODO is this block acting the same as MPI_Barrier(MPI_COMM_WORLD); ???
         MPI_Waitall(scount, &d_req_send[0], &d_stat_send[0]); // wait for all the sending operation
     }
 
     // MAY BE REMOVED
     //MPI_Barrier(MPI_COMM_WORLD);
-
+    /* 
+      `final_cluster_root` = number of clusters in the current node
+      `total_final_cluster_root` = total number of clusters
+      `points_in_cluster_final` = points that are in clusters, in the current node
+      `total_points_in_cluster_final` = total number of points in clusters
+    */
     int final_cluster_root = 0, total_final_cluster_root = 0;
-
     int points_in_cluster_final = 0, total_points_in_cluster_final = 0;
-    // determine the number of points in the current cluster, as well as the total system???
+    // determine the number of points in the current cluster
     for(i = 0; i < m_pts->m_i_num_points; i++) {
       if(m_parents[i] == i && m_parents_pr[i] == rank && m_child_count[i] > 1) {
         points_in_cluster_final += m_child_count[i];
         final_cluster_root++;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 482" << " points_in_cluster_final: " << points_in_cluster_final << endl;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 483" << " final_cluster_root: " << final_cluster_root << endl;
       }
-    } //int MPI_Allreduce(const void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm)
-    cout << "rank: " << rank << " in dbscan line: 486" << " points_in_cluster_final: " << points_in_cluster_final << " final_cluster_root: " << final_cluster_root << endl;
+    } 
+    /*
+      These MPI_Allreduce() are used to share metadata between all nodes.
+      Combines values from all processes and distributes the result back to all processes.
+      int MPI_Allreduce(const void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm)
+    */
+    // Determine the total number of pts that are in clusters, and not noise pts, in the entire system
     MPI_Allreduce(&points_in_cluster_final, &total_points_in_cluster_final, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    // Determine the number of clusters in the entire system
     MPI_Allreduce(&final_cluster_root, &total_final_cluster_root, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-    cout << "rank: " << rank << " in dbscan line: 489" << " post MPI_Allreduce points_in_cluster_final: " << points_in_cluster_final << " final_cluster_root: " << final_cluster_root << " total_points_in_cluster_final: " << total_points_in_cluster_final << " total_final_cluster_root: " << total_final_cluster_root << endl;
+    // Determine the total number of points in entire system
     int total_points = 0;
     MPI_Allreduce(&m_pts->m_i_num_points, &total_points, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-    // Combines values from all processes and distributes the result back to all processes.
+    
     if(rank == proc_of_interest) cout << "Points in clusters " << total_points_in_cluster_final << " Noise " << (total_points - total_points_in_cluster_final) << " Total points " << total_points << endl;
-    if(rank != proc_of_interest) cout << "in dbscan line: 494 rank: " << rank << " Points in clusters " << total_points_in_cluster_final << " Noise " << (total_points - total_points_in_cluster_final) << " Total points " << total_points << endl;
     if(rank == proc_of_interest) cout << "Total number of clusters " << total_final_cluster_root << endl;
-    if(rank != proc_of_interest) cout << "in dbscan line: 496 rank: " << rank << " Total number of clusters " << total_final_cluster_root << endl;
-    vector<int> global_roots;
-    global_roots.resize(nproc, 0);
-    // Gathers data from all processes and distributes it to all processes. int MPI_Allgather(const void *sendbuf, int  sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm)
+    
+    vector<int> global_roots; // used to determine the roots in each node
+    global_roots.resize(nproc, 0); // set the size and initialize to 0
+    /*
+      Need to determine the roots that are in other nodes.
+      Gathers data from all processes and distributes it to all processes. 
+      int MPI_Allgather(const void *sendbuf, int  sendcount, MPI_Datatype sendtype, void *recvbuf[starting address], int recvcount, MPI_Datatype recvtype, MPI_Comm comm)
+    */
     MPI_Allgather(&final_cluster_root, sizeof(int), MPI_BYTE, &global_roots[0], sizeof(int), MPI_BYTE, MPI_COMM_WORLD); 
-    if(rank == proc_of_interest) cout << "in dbscan line: 501" << " post MPI_Allgather final_cluster_root: " << final_cluster_root << " global_roots[0]: " << global_roots[0]  << endl;
-    if(rank != proc_of_interest) cout << "in dbscan line: 502 rank: " << rank << " post MPI_Allgather final_cluster_root: " << final_cluster_root << " global_roots[0]: " << global_roots[0]  << endl;
+    
+    // `cluster_offset` = used to assign cluster IDs
     int cluster_offset = 0;
-
-    for(i = 0; i <= rank; i++) {
+    
+    for(i = 0; i <= rank; i++) 
       cluster_offset += global_roots[i];
-      cout << "in dbscan rank: " << rank << " line: 507 i: " << i << " cluster_offset: " << cluster_offset << " global_roots[i]: " << global_roots[i] << endl;
-    }
-    cout << "in dbscan rank: " << rank << " line: 509 i: " << i << " cluster_offset: " << cluster_offset << endl;
-    m_pid_to_cid.clear();
+    // TODO this might be a problem
+    // declared in cluster.h: vector <int>  m_pid_to_cid;
+    m_pid_to_cid.clear(); // point ID to cluster ID. 1st use of this var in this function.
     m_pid_to_cid.resize(m_pts->m_i_num_points, -1);
-    cout << "in dbscan rank: " << rank << " line: 512 m_pts->m_i_num_points: " << m_pts->m_i_num_points << endl;
     // assign for the global roots only
     for(i = 0; i < m_pts->m_i_num_points; i++) {
+      // if current tree node is the current itterable AND the current pointer is for the current node
       if(m_parents[i] == i && m_parents_pr[i] == rank) {
+        // if the number of points is greater than 1
         if(m_child_count[i] > 1) {
           m_pid_to_cid[i] = cluster_offset;
           cluster_offset++;
-          cout << "in dbscan rank: " << rank << " line: 519 m_pid_to_cid[i]: " << m_pid_to_cid[i] << endl;
-          cout << "in dbscan rank: " << rank << " line: 520 cluster_offset: " << cluster_offset << endl;
         } else {
           m_pid_to_cid[i] = 0; // noise point
-          cout << "in dbscan rank: " << rank << " line: 523 noise point: " << i << endl;
         }
       }
     }
-      
+    // TODO this block above AND below seem troubling...
     for(i = 0; i < m_pts->m_i_num_points; i++) {
       if(m_parents_pr[i] == rank) {
         if(m_parents[i] != i) { //skip the noise points
-          m_pid_to_cid[i] = m_pid_to_cid[m_parents[i]];
-          // if(rank == proc_of_interest) cout << "in dbscan line: 532 m_pid_to_cid[i]: " << m_pid_to_cid[i] << endl;
+          m_pid_to_cid[i] = m_pid_to_cid[m_parents[i]]; // assign local roots
         }
       } else {
         // ask the outer to to send back the clusterID
-        (*p_cur_insert)[m_parents_pr[i]].push_back(0);
+        (*p_cur_insert)[m_parents_pr[i]].push_back(0); // flag: 0 means query and 1 means a reply
         (*p_cur_insert)[m_parents_pr[i]].push_back(m_parents[i]);
         (*p_cur_insert)[m_parents_pr[i]].push_back(i);
         (*p_cur_insert)[m_parents_pr[i]].push_back(rank);
-        // if(rank == proc_of_interest) cout << "in dbscan line: 540 m_parents[i]: " << m_parents[i] << endl;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 541 i: " << i << endl;
       }
     }
-    
     // MAY BE REMOVED
     //MPI_Barrier(MPI_COMM_WORLD);
 
     /*
       TODO The following section begins to merge the info from other nodes
+      TODO Why is the following for-loop only ran twice?
     */
 
     tag++;
-    // if(rank == proc_of_interest) cout << "in dbscan line: 553 tag: " << tag << endl;
+    
     int later_count;
     for(later_count = 0; later_count < 2; later_count++) {
       pswap = p_cur_insert;
@@ -564,53 +562,48 @@ namespace NWUClustering {
       // if(rank == proc_of_interest) cout << "in dbscan line: 564 scount: " << scount << endl;
       for(tid = 0; tid < nproc; tid++) {
         isend[tid] = (*p_cur_send)[tid].size();
-        // if(rank == proc_of_interest) cout << "in dbscan line: 567 isend[tid]: " << isend[tid] << endl;
         if(isend[tid] > 0) {
+          // send the outer points to their corresponding nodes???
+          // int MPI_Isend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request)
           MPI_Isend(&(*p_cur_send)[tid][0], isend[tid], MPI_INT, tid, tag + 1, MPI_COMM_WORLD, &d_req_send[scount]);
           scount++;
-          // if(rank == proc_of_interest) cout << "in dbscan line: 571 scount: " << scount << endl;
         }
       }
-      // TODO need a MPI_Wait()
+      // All processes send data to all processes.
+      // int MPI_Alltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm)
       MPI_Alltoall(&isend[0], 1, MPI_INT, &irecv[0], 1, MPI_INT, MPI_COMM_WORLD);
-      // if(rank == proc_of_interest) cout << "in dbscan line: 576 isend[0]: " << isend[0] << endl;
+      
       rcount = 0;
       for(tid = 0; tid < nproc; tid++) {
         if(irecv[tid] > 0) {
-          // if(rank == proc_of_interest) cout << "in dbscan line: 580 irecv[tid]: " << irecv[tid] << endl;
           merge_received[tid].clear();
           merge_received[tid].assign(irecv[tid], -1);
+          // This is the corresponding Irec() to the Isend above???
+          // int MPI_Irecv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request)
           MPI_Irecv(&merge_received[tid][0], irecv[tid], MPI_INT, tid, tag + 1, MPI_COMM_WORLD, &d_req_recv[rcount]);
           rcount++;
-          // if(rank == proc_of_interest) cout << "in dbscan line: 585 rcount: " << rcount << endl;
         }
       }
-
       for(tid = 0; tid < rcount; tid++) {
         MPI_Waitany(rcount, &d_req_recv[0], &pos, &d_stat);
-        // if(rank == proc_of_interest) cout << "in dbscan line: 591 rcount: " << rcount << endl;
+        
         rtag = d_stat.MPI_TAG;
         rsource = d_stat.MPI_SOURCE;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 594 rtag: " << rtag << endl;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 595 rsource: " << rsource << endl;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 596 rtag == tag + 1: " << (rtag == tag + 1) << endl;
+
         if(rtag == tag + 1) {
-          quadraples = merge_received[rsource].size()/4;
-          // if(rank == proc_of_interest) cout << "in dbscan line: 599 quadraples: " << quadraples << endl;
+          quadraples = merge_received[rsource].size()/4; // divided by 4 because of how `(*p_cur_insert)` is built
+          // break up `merge_received[rsource]`, to rebuild `(*p_cur_insert)[source_pr]`,
+            // depending on the `flag` value, that is changed in the rebuild process
           for(pid = 0; pid < quadraples; pid++) {
             // get the quadraple
             source_pr = merge_received[rsource].back();
             merge_received[rsource].pop_back();
-            // if(rank == proc_of_interest) cout << "in dbscan line: 604 source_pr: " << source_pr << endl;
             source_point = merge_received[rsource].back();
             merge_received[rsource].pop_back();
-            // if(rank == proc_of_interest) cout << "in dbscan line: 607 source_point: " << source_point << endl;
             target_point = merge_received[rsource].back();
             merge_received[rsource].pop_back();
-            // if(rank == proc_of_interest) cout << "in dbscan line: 610 target_point: " << target_point << endl;
             flag = merge_received[rsource].back();
             merge_received[rsource].pop_back();
-            // if(rank == proc_of_interest) cout << "in dbscan line: 613 flag: " << flag << endl;
             if(flag == 0) {         
               (*p_cur_insert)[source_pr].push_back(1);
               (*p_cur_insert)[source_pr].push_back(source_point);
@@ -634,7 +627,6 @@ namespace NWUClustering {
     merge_received.clear();
     merge_send1.clear();
     merge_send2.clear();
-    init.clear();
     global_roots.clear();
   }
 
@@ -650,7 +642,7 @@ namespace NWUClustering {
     // get the total number of points
     int total_points = 0;
     MPI_Allreduce(&m_pts->m_i_num_points, &total_points, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-  
+    if(rank == proc_of_interest) cout << "in dbscan line: 653" << " in ClusteringAlgo::writeCluster_distributed total_points: " << total_points << endl;
     vector<int> point_count;
     point_count.resize(nproc, 0);
     MPI_Allgather(&m_pts->m_i_num_points, sizeof(int), MPI_BYTE, &point_count[0], sizeof(int), MPI_BYTE, MPI_COMM_WORLD);
