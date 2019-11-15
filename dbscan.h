@@ -50,10 +50,10 @@ namespace NWUClustering {
     int   m_messages_per_round;
     int   m_compression;
 
-    vector<bool> m_noise;
-    vector<bool> m_visited;
-    vector <int> m_parents;
-    vector <int> m_parents_pr;
+    vector<bool> m_noise; // This is only used in `dbscan.cpp:55:    m_noise.clear();`
+    vector<bool> m_visited; // This is only used in `dbscan.cpp:56:    m_visited.clear();`
+    vector <int> m_parents; // Elements hold the pointers of the clustering tree
+    vector <int> m_parents_pr; // Elements hold the pointers for which node the point is in
     vector <int> m_child_count; 
 
     vector <int> m_member;
