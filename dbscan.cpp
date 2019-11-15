@@ -39,21 +39,9 @@ namespace NWUClustering {
     m_messages_per_round = -1; // always -1
     m_compression = 0; // can set to 1 if want to compress specailly in the first round of communication
   }
-    
-
-
-    
-    
-
-
-
-
-
 
   // Destructor
   ClusteringAlgo::~ClusteringAlgo() {
-    m_noise.clear();
-    m_visited.clear();
     m_parents.clear();
     m_parents_pr.clear();
     m_child_count.clear();
@@ -102,8 +90,6 @@ namespace NWUClustering {
     // increment the time counter
     dcomtime += (stop - start);
   }
-  
-
 
   // called in run_dbscan_algo_uf_mpi_interleaved()
   void ClusteringAlgo::trivial_compression(vector <int>* data, vector < vector <int> >* parser, int nproc, int rank, int round, double& comtime, double& sum_comp_rate) {
