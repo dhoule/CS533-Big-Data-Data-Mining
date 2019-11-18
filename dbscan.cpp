@@ -623,7 +623,7 @@ namespace NWUClustering {
     // get the total number of points
     int total_points = 0;
     MPI_Allreduce(&m_pts->m_i_num_points, &total_points, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-    if(rank == proc_of_interest) 
+    
     vector<int> point_count;
     point_count.resize(nproc, 0);
     MPI_Allgather(&m_pts->m_i_num_points, sizeof(int), MPI_BYTE, &point_count[0], sizeof(int), MPI_BYTE, MPI_COMM_WORLD);
