@@ -39,21 +39,9 @@ namespace NWUClustering {
     m_messages_per_round = -1; // always -1
     m_compression = 0; // can set to 1 if want to compress specailly in the first round of communication
   }
-    
-
-
-    
-    
-
-
-
-
-
 
   // Destructor
   ClusteringAlgo::~ClusteringAlgo() {
-    m_noise.clear();
-    m_visited.clear();
     m_parents.clear();
     m_parents_pr.clear();
     m_child_count.clear();
@@ -102,8 +90,6 @@ namespace NWUClustering {
     // increment the time counter
     dcomtime += (stop - start);
   }
-  
-
 
   // called in run_dbscan_algo_uf_mpi_interleaved()
   void ClusteringAlgo::trivial_compression(vector <int>* data, vector < vector <int> >* parser, int nproc, int rank, int round, double& comtime, double& sum_comp_rate) {
@@ -290,9 +276,8 @@ namespace NWUClustering {
     p_cur_insert = &merge_send2; // TODO merge_send2 is only used for this purpose
     // cannot clear `merge_send1` OR `merge_send2`, as the & gives the "address of". This seems stupid, as it just renames variables
     // `m_child_count` is declared in dbscan.h
-    // TODO I don't know why reserve() and resize() are called together???
-    m_child_count.resize(m_pts->m_i_num_points, 0); 
-    m_child_count.reserve(m_pts->m_i_num_points);  
+    
+    m_child_count.resize(m_pts->m_i_num_points, 0);   
     
     int root, local_continue_to_run = 0, global_continue_to_run;
     
@@ -331,9 +316,14 @@ namespace NWUClustering {
     
     // MAY BE REMOVED
     //MPI_Barrier(MPI_COMM_WORLD);
+    /*
+      pos = used in MPI_Waitany(), for the `index` attribute
+      quadraples = used to determine how many points have actually been sent to a node
+      scount = used to determine the number of messages that have actually been sent
+    */
     int pos, quadraples, scount, tid, tag = 0, rtag, rsource, rcount, isend[nproc], irecv[nproc], flag;
-    // TODO Ask if malloc() is really needed in C++
-    MPI_Request s_req_recv[nproc], s_req_send[nproc], d_req_send[nproc], d_req_recv[nproc]; // better to malloc the memory
+    
+    MPI_Request s_req_recv[nproc], s_req_send[nproc], d_req_send[nproc], d_req_recv[nproc]; 
     MPI_Status  d_stat_send[nproc], d_stat; // d_stat_send[nproc]: for MPI_Waitall; d_stat: for MPI_Waitany
     int target_point, source_point, source_pr;
     
@@ -502,13 +492,17 @@ namespace NWUClustering {
       int MPI_Allgather(const void *sendbuf, int  sendcount, MPI_Datatype sendtype, void *recvbuf[starting address], int recvcount, MPI_Datatype recvtype, MPI_Comm comm)
     */
     MPI_Allgather(&final_cluster_root, sizeof(int), MPI_BYTE, &global_roots[0], sizeof(int), MPI_BYTE, MPI_COMM_WORLD); 
-    
+    /*
+      Determine the range of available IDs for each node by determining the largest number of roots on a single node
+    */
+    int range = -1;
+    for(i = 0; i < nproc; i++)
+      if(range < global_roots[i])
+        range = global_roots[i];
+
     // `cluster_offset` = used to assign cluster IDs
-    int cluster_offset = 0;
-    
-    for(i = 0; i <= rank; i++) 
-      cluster_offset += global_roots[i];
-    // TODO this might be a problem
+    int cluster_offset = (rank * range) + 1; // +1 because 0 is the noise ID
+
     // declared in cluster.h: vector <int>  m_pid_to_cid;
     m_pid_to_cid.clear(); // point ID to cluster ID. 1st use of this var in this function.
     m_pid_to_cid.resize(m_pts->m_i_num_points, -1);
@@ -517,7 +511,7 @@ namespace NWUClustering {
       // if current tree node is the current itterable AND the current pointer is for the current node
       if(m_parents[i] == i && m_parents_pr[i] == rank) {
         // if the number of points is greater than 1
-        if(m_child_count[i] > 1) {
+        if(m_child_count[i] > 1) { 
           m_pid_to_cid[i] = cluster_offset;
           cluster_offset++;
         } else {
@@ -953,7 +947,7 @@ namespace NWUClustering {
     start = stop;
     i = 0;
       
-    MPI_Request s_req_recv[nproc], s_req_send[nproc], d_req_send[nproc], d_req_recv[nproc]; // better to malloc the memory
+    MPI_Request s_req_recv[nproc], s_req_send[nproc], d_req_send[nproc], d_req_recv[nproc]; 
     MPI_Status  d_stat_send[nproc], d_stat;
 
     start = MPI_Wtime();
