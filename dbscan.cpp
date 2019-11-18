@@ -71,14 +71,10 @@ namespace NWUClustering {
     while(pid_count > 0) {
       pid = parser[pos++];
       npid_count = parser[pos++];
-      // if(irank == proc_of_interest) cout << "in dbscan line: 86" << " pid: " << pid << endl;
-      // if(irank == proc_of_interest) cout << "in dbscan line: 87" << " npid_count: " << npid_count << endl;
       for(j = 0; j < npid_count; j++) {
         // push_back() adds elements to the "back" of the vector
         (*data).push_back(pid); 
         (*data).push_back(parser[pos++]);
-        // if(irank == proc_of_interest) cout << "in dbscan line: 92" << " pid: " << pid << endl;
-        // if(irank == proc_of_interest) cout << "in dbscan line: 93" << " parser[pos - 1]: " << parser[pos - 1] << endl;
       }
 
       pid_count--;
@@ -98,20 +94,17 @@ namespace NWUClustering {
     double org = 0, comp = 0;
     int pairs, pid, npid, i, j, pid_count, npid_count;
     int irank; 
-    MPI_Comm_rank(MPI_COMM_WORLD, &irank); //if(irank == proc_of_interest) cout << "in dbscan line: 113" << " in ClusteringAlgo::trivial_compression" << endl;
+    MPI_Comm_rank(MPI_COMM_WORLD, &irank); 
 
     // The number of "pairs" in the "data" vector
-    pairs = (*data).size()/2; // TODO this must be why the data must be a factor of 2???
-    // if(irank == proc_of_interest) cout << "in dbscan line: 121" << " pairs: " << pairs << endl;
+    pairs = (*data).size()/2; 
     // TODO don't know what "org" is supposed to stand for, 'original' maybe
     org = (*data).size();   
-    // if(irank == proc_of_interest) cout << "in dbscan line: 124" << " org: " << org << endl;
+    
     // loop over 'data' and add elements to the back of a vector 'parser'[pid]
     for(i = 0; i < pairs; i++) {
       pid = (*data)[2 * i];
       npid = (*data)[2 * i + 1];
-      // if(irank == proc_of_interest) cout << "in dbscan line: 129" << " pid: " << pid << endl;
-      // if(irank == proc_of_interest) cout << "in dbscan line: 130" << " npid: " << npid << endl;
       (*parser)[pid].push_back(npid);
     }
     // empty the 'data' vector, and set the size to 0
@@ -121,28 +114,22 @@ namespace NWUClustering {
     (*data).push_back(pid_count); // uniques pids, should update later
     // 'm_pts' is the current cluster's struct object. Initialized in clusters.cpp read_file().
     // Loop rebuilds the 'data' vector and clears out dimensions of the 'parser' vector
-    // if(irank == proc_of_interest) cout << "in dbscan line: 140" << " m_pts->m_i_num_points: " << m_pts->m_i_num_points << endl;
     for(i = 0; i < m_pts->m_i_num_points; i++) {
       npid_count = (*parser)[i].size();
-      // if(irank == proc_of_interest) cout << "in dbscan line: 143" << " npid_count: " << npid_count << endl;
       if(npid_count > 0) {
         (*data).push_back(i);
         (*data).push_back(npid_count);
-        // if(irank == proc_of_interest) cout << "in dbscan line: 147" << " i: " << i << endl;
-        // if(irank == proc_of_interest) cout << "in dbscan line: 148" << " npid_count: " << npid_count << endl;
         for(j = 0; j < npid_count; j++) {
-          (*data).push_back((*parser)[i][j]);  
-          // if(irank == proc_of_interest) cout << "in dbscan line: 151" << " (*parser)[i][j]: " << (*parser)[i][j] << endl;        
+          (*data).push_back((*parser)[i][j]);       
         }
         pid_count++;
-        // if(irank == proc_of_interest) cout << "in dbscan line: 154" << " pid_count: " << pid_count << endl; 
         (*parser)[i].clear();
       }
     }
     // assign the first element the value of unique cluster IDs
-    // (*data)[0] = pid_count; if(irank == proc_of_interest) cout << "in dbscan line: 159" << " pid_count: " << pid_count << endl; 
+    // (*data)[0] = pid_count; 
     // "computed" is the new size of the 'data' vector
-    // comp = (*data).size(); if(irank == proc_of_interest) cout << "in dbscan line: 159" << " comp: " << comp << endl; 
+    // comp = (*data).size(); 
     // Get the stopping time of the function, increase the incrimenter
     double stop = MPI_Wtime();
     comtime += (stop - start);
@@ -553,7 +540,7 @@ namespace NWUClustering {
         (*p_cur_insert)[tid].clear();
   
       scount = 0;
-      // if(rank == proc_of_interest) cout << "in dbscan line: 564 scount: " << scount << endl;
+      
       for(tid = 0; tid < nproc; tid++) {
         isend[tid] = (*p_cur_send)[tid].size();
         if(isend[tid] > 0) {
@@ -630,13 +617,13 @@ namespace NWUClustering {
     int rank, nproc;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
-    // if(rank == proc_of_interest) cout << "in dbscan line: 647" << " in ClusteringAlgo::writeCluster_distributed" << endl;
+    
     int i;
 
     // get the total number of points
     int total_points = 0;
     MPI_Allreduce(&m_pts->m_i_num_points, &total_points, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-    if(rank == proc_of_interest) cout << "in dbscan line: 653" << " in ClusteringAlgo::writeCluster_distributed total_points: " << total_points << endl;
+    if(rank == proc_of_interest) 
     vector<int> point_count;
     point_count.resize(nproc, 0);
     MPI_Allgather(&m_pts->m_i_num_points, sizeof(int), MPI_BYTE, &point_count[0], sizeof(int), MPI_BYTE, MPI_COMM_WORLD);
@@ -745,8 +732,6 @@ namespace NWUClustering {
       handle_error(ret, __LINE__);
       return;
     }
-  
-    //cout << "rank " << rank << " AT the end of wrting PnetCDF file" << endl;
   }
 
   // "uf" == "Union Find"
@@ -758,7 +743,7 @@ namespace NWUClustering {
     int rank, nproc, mpi_namelen;
     kdtree2_result_vector ne;
     kdtree2_result_vector ne_outer;
-    // if(rank == proc_of_interest) cout << "in dbscan line: 775" << " in run_dbscan_algo_uf_mpi_interleaved" << endl;
+    
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
@@ -777,8 +762,6 @@ namespace NWUClustering {
     for(i = 0; i < nproc; i++) {
       start_pos[i] = total_points;
       total_points += points_per_pr[i];
-      // if(rank == proc_of_interest) cout << "in dbscan line: 794" << " start_pos[i]: " << start_pos[i] << endl;
-      // if(rank == proc_of_interest) cout << "in dbscan line: 795" << " total_points: " << total_points << endl;
     }
 
     // assign proc IDs
@@ -787,11 +770,8 @@ namespace NWUClustering {
 
     k = 0;
     for(i = 0; i < nproc; i++) {
-      for(j = 0; j < points_per_pr[i]; j++) {
-        // if(rank == proc_of_interest) cout << "in dbscan line: 805" << " vec_prID[k]: " << vec_prID[k] << endl;
+      for(j = 0; j < points_per_pr[i]; j++)
         vec_prID[k++] = i;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 807" << " vec_prID[k]: " << vec_prID[k] << endl;
-      }
     }
 
     // restting the membership and corepoints values
@@ -804,11 +784,8 @@ namespace NWUClustering {
     // setting paretns to itself and corresponding proc IDs
     for(i = 0; i < dbs.m_pts->m_i_num_points; i++) {
       pid = (*ind)[i];
-      // if(rank == proc_of_interest) cout << "in dbscan line: 821" << " pid: " << pid << endl;
       dbs.m_parents[pid] = pid;
       dbs.m_parents_pr[pid] = rank;
-      // if(rank == proc_of_interest) cout << "in dbscan line: 821" << " dbs.m_parents[pid]: " << dbs.m_parents[pid] << endl;
-      // if(rank == proc_of_interest) cout << "in dbscan line: 821" << " dbs.m_parents_pr[pid]: " << dbs.m_parents_pr[pid] << endl;
     }
 
     vector < vector <int > > merge_received;
@@ -845,7 +822,6 @@ namespace NWUClustering {
     start = MPI_Wtime();
     for(i = 0; i < dbs.m_pts->m_i_num_points; i++) {
       pid = (*ind)[i];
-      // if(rank == proc_of_interest) cout << "in dbscan line: 862" << " pid: " << pid << endl;
       // getting the local neighborhoods of local point
       ne.clear();
       dbs.m_kdtree->r_nearest_around_point(pid, 0, dbs.m_epsSquare, ne);
@@ -855,7 +831,6 @@ namespace NWUClustering {
 
       for (int u = 0; u < dbs.m_pts->m_i_dims; u++) {
         qv[u] = dbs.m_kdtree->the_data[pid][u];
-        // if(rank == proc_of_interest) cout << "in dbscan line: 872" << " qv[u]: " << qv[u] << endl;
       }
 
       // getting the remote neighborhood of the local point
@@ -867,14 +842,12 @@ namespace NWUClustering {
       if(ne.size() + ne_outer.size() >= dbs.m_minPts) {
         // pid is a core point
         root = pid;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 884" << " root: " << root << endl;
         dbs.m_corepoint[pid] = 1;
         dbs.m_member[pid] = 1;
         
         // traverse the rmote neighbors and add in the communication buffers  
         for(j = 0; j < ne_outer.size(); j++) {
           npid = ne_outer[j].idx;
-          // if(rank == proc_of_interest) cout << "in dbscan line: 891" << " npid: " << npid << endl;
           (*p_cur_insert)[dbs.m_pts_outer->m_prIDs[npid]].push_back(pid);
           (*p_cur_insert)[dbs.m_pts_outer->m_prIDs[npid]].push_back(dbs.m_pts_outer->m_ind[npid]);
         }
@@ -882,12 +855,10 @@ namespace NWUClustering {
         //traverse the local neighbors and perform union operation
         for (j = 0; j < ne.size(); j++) {
           npid = ne[j].idx;
-          // if(rank == proc_of_interest) cout << "in dbscan line: 899" << " npid: " << npid << endl;
+          
           // get the root containing npid
           root1 = npid;
           root2 = root;
-          // if(rank == proc_of_interest) cout << "in dbscan line: 903" << " root1: " << root1 << endl;
-          // if(rank == proc_of_interest) cout << "in dbscan line: 904" << " root2: " << root2 << endl;
           if(dbs.m_corepoint[npid] == 1 || dbs.m_member[npid] == 0) {
             dbs.m_member[npid] = 1;
 
@@ -897,9 +868,6 @@ namespace NWUClustering {
                 if(dbs.m_parents[root1] == root1) {
                   dbs.m_parents[root1] = dbs.m_parents[root2];
                   root = dbs.m_parents[root2];
-                  // if(rank == proc_of_interest) cout << "in dbscan line: 914" << " dbs.m_parents[root1] == root1: " << (dbs.m_parents[root1] == root1) << endl;
-                  // if(rank == proc_of_interest) cout << "in dbscan line: 915" << " dbs.m_parents[root1]: " << dbs.m_parents[root1] << endl;
-                  // if(rank == proc_of_interest) cout << "in dbscan line: 916" << " root: " << root << endl;
                   break;
                 }
 
@@ -907,16 +875,10 @@ namespace NWUClustering {
                 int z = dbs.m_parents[root1];
                 dbs.m_parents[root1] = dbs.m_parents[root2];
                 root1 = z;
-                // if(rank == proc_of_interest) cout << "in dbscan line: 924" << " z: " << z << endl;
-                // if(rank == proc_of_interest) cout << "in dbscan line: 925" << " dbs.m_parents[root1]: " << dbs.m_parents[root1] << endl;
-                // if(rank == proc_of_interest) cout << "in dbscan line: 926" << " root1: " << root1 << endl;
               } else {
                 if(dbs.m_parents[root2] == root2) {
                   dbs.m_parents[root2] = dbs.m_parents[root1];
                   root = dbs.m_parents[root1];
-                  // if(rank == proc_of_interest) cout << "in dbscan line: 931" << " dbs.m_parents[root2] == root2: " << (dbs.m_parents[root2] == root2) << endl;
-                  // if(rank == proc_of_interest) cout << "in dbscan line: 932" << " dbs.m_parents[root2]: " << dbs.m_parents[root2] << endl;
-                  // if(rank == proc_of_interest) cout << "in dbscan line: 933" << " root: " << root << endl;
                   break;
                 }
 
@@ -924,9 +886,6 @@ namespace NWUClustering {
                 int z = dbs.m_parents[root2];
                 dbs.m_parents[root2] = dbs.m_parents[root1];                  
                 root2 = z;
-                // if(rank == proc_of_interest) cout << "in dbscan line: 941" << " z: " << z << endl;
-                // if(rank == proc_of_interest) cout << "in dbscan line: 942" << " dbs.m_parents[root2]: " << dbs.m_parents[root2] << endl;
-                // if(rank == proc_of_interest) cout << "in dbscan line: 943" << " root2: " << root2 << endl;
               }
             }
           }
@@ -960,40 +919,26 @@ namespace NWUClustering {
     for(tid = 0; tid < nproc; tid++) {
       triples = (*p_cur_insert)[tid].size()/2;
       local_count += triples;
-      // if(rank == proc_of_interest) cout << "in dbscan line: 977" << " triples: " << triples << endl;
-      // if(rank == proc_of_interest) cout << "in dbscan line: 978" << " local_count: " << local_count << endl;
       for(pid = 0; pid < triples; pid++) {
         v1 = (*p_cur_insert)[tid][2 * pid];
         root1 = v1;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 982" << " v1: " << v1 << endl;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 983" << " root1: " << root1 << endl;
         while(dbs.m_parents[root1] != root1) {
           root1 = dbs.m_parents[root1];
-          // if(rank == proc_of_interest) cout << "in dbscan line: 986" << " root1: " << root1 << endl;
         }
 
         while(dbs.m_parents[v1] != root1) {
           int tmp = dbs.m_parents[v1];
           dbs.m_parents[v1] = root1;
           v1 = tmp;
-          // if(rank == proc_of_interest) cout << "in dbscan line: 993" << " tmp: " << tmp << endl;
-          // if(rank == proc_of_interest) cout << "in dbscan line: 994" << " dbs.m_parents[v1]: " << dbs.m_parents[v1] << endl;
-          // if(rank == proc_of_interest) cout << "in dbscan line: 995" << " v1: " << v1 << endl;
         }
 
         (*p_cur_insert)[tid][2 * pid] = root1;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 999" << " (*p_cur_insert)[tid][2 * pid]: " << (*p_cur_insert)[tid][2 * pid] << endl;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 1000" << " tid: " << tid << endl;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 1001" << " pid: " << pid << endl;
       }
     }
 
-    local_count = local_count/nproc;
-    // if(rank == proc_of_interest) cout << "in dbscan line: 1006" << " local_count: " << local_count << endl;   
+    local_count = local_count/nproc;  
     global_count = 0;
-    // if(rank == proc_of_interest) cout << "in dbscan line: 1008" << " global_count: " << global_count << endl; 
     MPI_Allreduce(&local_count, &global_count, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-    // if(rank == proc_of_interest) cout << "in dbscan line: 1010" << " global_count: " << global_count << endl; 
     //message_per_round
     int uv, uf, um, ul, ucount;
     int local_continue_to_run, global_continue_to_run;
@@ -1006,9 +951,6 @@ namespace NWUClustering {
       pswap = p_cur_insert;
       p_cur_insert = p_cur_send;  
       p_cur_send = pswap;
-      // if(rank == proc_of_interest) cout << "in dbscan line: 1023" << " pswap: " << pswap << endl; 
-      // if(rank == proc_of_interest) cout << "in dbscan line: 1024" << " p_cur_insert: " << p_cur_insert << endl; 
-      // if(rank == proc_of_interest) cout << "in dbscan line: 1025" << " p_cur_send: " << p_cur_send << endl; 
       for(tid = 0; tid < nproc; tid++)
         (*p_cur_insert)[tid].clear();
 
@@ -1047,15 +989,12 @@ namespace NWUClustering {
         }
       }
 
-      local_count = 0;
-      // if(rank == proc_of_interest) cout << "in dbscan line: 1065" << " local_count: " << local_count << endl; 
+      local_count = 0; 
       //get the data and process them
       for(tid = 0; tid < rcount; tid++) {
         MPI_Waitany(rcount, &d_req_recv[0], &pos, &d_stat);
         rtag = d_stat.MPI_TAG;
-        rsource = d_stat.MPI_SOURCE;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 1071" << " rtag: " << rtag << endl; 
-        // if(rank == proc_of_interest) cout << "in dbscan line: 1072" << " rsource: " << rsource << endl;   
+        rsource = d_stat.MPI_SOURCE;  
         if(rtag == tag + 1) {
           // process received the data now
           if(dbs.m_messages_per_round == -1 && i == 0) {
@@ -1065,17 +1004,12 @@ namespace NWUClustering {
 
               triples = merge_received[rsource].size()/2;
               par_proc = rsource;
-              // if(rank == proc_of_interest) cout << "in dbscan line: 1082" << " triples: " << triples << endl; 
-              // if(rank == proc_of_interest) cout << "in dbscan line: 1083" << " par_proc: " << par_proc << endl; 
             } else {
               triples = merge_received[rsource].size()/2;
               par_proc = rsource;
-              // if(rank == proc_of_interest) cout << "in dbscan line: 1087" << " triples: " << triples << endl; 
-              // if(rank == proc_of_interest) cout << "in dbscan line: 1088" << " par_proc: " << par_proc << endl; 
             }
           } else {
             triples = merge_received[rsource].size()/3;
-            // if(rank == proc_of_interest) cout << "in dbscan line: 1092" << " triples: " << triples << endl;
           }
 
           for(pid = 0; pid < triples; pid++) {
@@ -1092,7 +1026,6 @@ namespace NWUClustering {
             merge_received[rsource].pop_back();
         
             int con = 0;
-            // if(rank == proc_of_interest) cout << "in dbscan line: 1109" << " i: " << i << endl;
             if(i > 0)
               con = 1;
             else if (i == 0 && (dbs.m_corepoint[v1] == 1 || dbs.m_member[v1] == 0)) { 
@@ -1109,7 +1042,6 @@ namespace NWUClustering {
                   break;
 
                 root1 = dbs.m_parents[root1];
-                // if(rank == proc_of_interest) cout << "in dbscan line: 1126" << " root1: " << root1 << endl;
               }
         
               // compress the local path
@@ -1117,9 +1049,6 @@ namespace NWUClustering {
                 int tmp = dbs.m_parents[v1];
                 dbs.m_parents[v1] = root1;
                 v1 = tmp;
-                // if(rank == proc_of_interest) cout << "in dbscan line: 1134" << " tmp: " << tmp << endl;
-                // if(rank == proc_of_interest) cout << "in dbscan line: 1135" << " dbs.m_parents[v1]: " << dbs.m_parents[v1] << endl;
-                // if(rank == proc_of_interest) cout << "in dbscan line: 1136" << " v1: " << v1 << endl;
               }
   
               if(dbs.m_parents[root1] == v2 && dbs.m_parents_pr[root1] == par_proc) {
@@ -1137,8 +1066,6 @@ namespace NWUClustering {
                   // do union
                   dbs.m_parents[root1] = v2;
                   dbs.m_parents_pr[root1] = par_proc;
-                  // if(rank == proc_of_interest) cout << "in dbscan line: 1154" << " dbs.m_parents[root1]: " << dbs.m_parents[root1] << endl;
-                  // if(rank == proc_of_interest) cout << "in dbscan line: 1155" << " dbs.m_parents_pr[root1]: " << dbs.m_parents_pr[root1] << endl;
                   continue;
                 } else {
                   // ask the parent of v2
@@ -1146,10 +1073,6 @@ namespace NWUClustering {
                   (*p_cur_insert)[par_proc].push_back(dbs.m_parents_pr[root1]);
                   (*p_cur_insert)[par_proc].push_back(v2);
                   local_count++;
-                  // if(rank == proc_of_interest) cout << "in dbscan line: 1163" << " root1: " << root1 << endl;
-                  // if(rank == proc_of_interest) cout << "in dbscan line: 1164" << " dbs.m_parents_pr[root1]: " << dbs.m_parents_pr[root1] << endl;
-                  // if(rank == proc_of_interest) cout << "in dbscan line: 1165" << " v2: " << v2 << endl;
-                  // if(rank == proc_of_interest) cout << "in dbscan line: 1166" << " local_count: " << local_count << endl;
                 }
               } else {
                 // root1 is not local
@@ -1159,20 +1082,12 @@ namespace NWUClustering {
                   (*p_cur_insert)[dbs.m_parents_pr[root1]].push_back(par_proc);
                   (*p_cur_insert)[dbs.m_parents_pr[root1]].push_back(dbs.m_parents[root1]);
                   local_count++;
-                  // if(rank == proc_of_interest) cout << "in dbscan line: 1176" << " v2: " << v2 << endl;
-                  // if(rank == proc_of_interest) cout << "in dbscan line: 1177" << " par_proc: " << par_proc << endl;
-                  // if(rank == proc_of_interest) cout << "in dbscan line: 1178" << " dbs.m_parents[root1]: " << dbs.m_parents[root1] << endl;
-                  // if(rank == proc_of_interest) cout << "in dbscan line: 1179" << " local_count: " << local_count << endl;
                 } else {
                   // ask the parent of v2
                   (*p_cur_insert)[par_proc].push_back(dbs.m_parents[root1]);
                   (*p_cur_insert)[par_proc].push_back(dbs.m_parents_pr[root1]);
                   (*p_cur_insert)[par_proc].push_back(v2);
                   local_count++;
-                  // if(rank == proc_of_interest) cout << "in dbscan line: 1186" << " dbs.m_parents[root1]: " << dbs.m_parents[root1] << endl;
-                  // if(rank == proc_of_interest) cout << "in dbscan line: 1187" << " dbs.m_parents_pr[root1]: " << dbs.m_parents_pr[root1] << endl;
-                  // if(rank == proc_of_interest) cout << "in dbscan line: 1188" << " v2: " << v2 << endl;
-                  // if(rank == proc_of_interest) cout << "in dbscan line: 1189" << " local_count: " << local_count << endl;
                 }
               }
             }
@@ -1188,19 +1103,17 @@ namespace NWUClustering {
         MPI_Waitall(scount, &d_req_send[0], &d_stat_send[0]); 
 
       tag += 2; // change the tag value although not important
-      // if(rank == proc_of_interest) cout << "in dbscan line: 1205" << " tag: " << tag << endl;
+      
       local_continue_to_run = 0;
       local_count = 0;
       for(tid = 0; tid < nproc; tid++) {
-        local_count += (*p_cur_insert)[tid].size()/3; // TODO why divide by 3
-        // if(rank == proc_of_interest) cout << "in dbscan line: 1210" << " (*p_cur_insert)[tid].size()/3: " << ((*p_cur_insert)[tid].size()/3) << endl;
-        // if(rank == proc_of_interest) cout << "in dbscan line: 1211" << " local_count: " << local_count << endl;
+        local_count += (*p_cur_insert)[tid].size()/3; 
         if((*p_cur_insert)[tid].size() > 0)
           local_continue_to_run = 1;
       }
       
       local_count = local_count / nproc;
-      // if(rank == proc_of_interest) cout << "in dbscan line: 1217" << " local_count: " << local_count << endl;
+      
       global_count = 0;
       global_continue_to_run = 0;
             
