@@ -50,8 +50,6 @@ namespace NWUClustering {
     int   m_messages_per_round;
     int   m_compression;
 
-    // delete later
-
     vector <int> m_parents; // Elements hold the pointers of the clustering tree
     vector <int> m_parents_pr; // Elements hold the pointers for which node the point is in
     vector <int> m_child_count; 
