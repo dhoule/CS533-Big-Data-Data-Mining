@@ -173,10 +173,6 @@ namespace NWUClustering {
         // interval struct defined in kdtree2.hpp
           // m_box, is of type interval*
         m_pts->m_box = new interval[m_pts->m_i_dims]; 
-
-        //allocate memory for the points
-        //m_pts->m_points.resize(extents[num_points][dims]);
-        //m_pts->m_points.resize(extents[m_pts->m_i_num_points][dims]);
         
         //allocate memory for the points
         m_pts->m_points.resize(m_pts->m_i_num_points);
