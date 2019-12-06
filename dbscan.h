@@ -39,7 +39,6 @@ namespace NWUClustering {
     void  get_clusters_distributed();
     void  writeCluster_distributed(string outfilename);
 
-    void  convert(vector< vector <int> >* data, int nproc, int rank, int round);
     void  trivial_compression(vector <int>* data, vector < vector <int> >* parser, int nproc, int rank, int round, double& comtime, double& sum_comp_rate);
     void  trivial_decompression(vector <int>* data, int nproc, int rank, int round, double& dcomtime);
 
