@@ -47,8 +47,8 @@ namespace NWUClustering {
   // Adds points to a cluster object
     // Called in geometric_partitioning.cpp
   bool Clusters::addPoints(int source, int buf_size, int dims, vector<float>& raw_data) {
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    int rank;// TODO not even used
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);// TODO not even used
 
     // used as itterables
     int i, j, k; 
@@ -71,7 +71,7 @@ namespace NWUClustering {
       // resize() - Resizes the container so that it contains n elements
     m_pts_outer->m_points.resize(m_pts_outer->m_i_num_points);
     // resize each new point object
-    for(int ll = 0; ll < m_pts_outer->m_i_num_points; ll++)
+    for(int ll = 0; ll < m_pts_outer->m_i_num_points; ll++) 
       m_pts_outer->m_points[ll].resize(dims);
     // resize the point IDs
     m_pts_outer->m_prIDs.resize(m_pts_outer->m_i_num_points, -1);
@@ -97,8 +97,8 @@ namespace NWUClustering {
   // Updates OUTER points' cluster IDs
     // Called in geometric_partitioning.cpp
   bool Clusters::updatePoints(vector< vector<int> >& raw_ind) {
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    int rank;// TODO not even used
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);// TODO not even used
     
     // used as itterables
     int i, j = -1;
@@ -233,8 +233,8 @@ namespace NWUClustering {
   
   // Called from mpi_main...
   int Clusters::build_kdtree() {
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    int rank;// TODO not even used
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);// TODO not even used
     // if the Point objects weren't created, don't bother going further...
     if(m_pts == NULL) {
       cout << "Point set is empty" << endl;
@@ -253,8 +253,8 @@ namespace NWUClustering {
   } 
   // Called from mpi_main...
   int Clusters::build_kdtree_outer() {
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    int rank;// TODO not even used
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);// TODO not even used
     
     if(m_pts_outer == NULL) {
       cout << "Outer point set is empty" << endl;
