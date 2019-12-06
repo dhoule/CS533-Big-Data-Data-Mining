@@ -956,10 +956,6 @@ namespace NWUClustering {
       //{
       //  dbs.trivial_compression(p_cur_send, &parser, nproc, rank, i, comtime, sum_comp_rate);
       //}
-      
-      // send all the data
-      // compress the data before send
-      //dbs.convert(p_cur_send, nproc, rank, i);
     
       scount = 0;
       for(tid = 0; tid < nproc; tid++) {
