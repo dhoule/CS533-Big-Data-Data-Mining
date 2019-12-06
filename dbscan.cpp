@@ -222,7 +222,6 @@ namespace NWUClustering {
 
   // called in mpi_main.cpp.
     // The function merges Points from other nodes
-    // TODO this needs to be looked at in more detail
   void ClusteringAlgo::get_clusters_distributed() {
     // Determine the current node's rank within the cluster, and the size of the cluster itself
     int rank, nproc, i;
@@ -290,7 +289,7 @@ namespace NWUClustering {
         // set the root of i directly to root
         m_parents[i] = root; // creating a new set for each element x is acheived by setting p(x) to x
         m_child_count[root] = m_child_count[root] + 1; // increase the child count by one
-        //m_parents_pr[i] = rank; // NO NEED TO SET THIS AS IT  TODO as it what??? Ans: it should already be in the current node
+        //m_parents_pr[i] = rank; // NO NEED TO SET THIS AS IT // as it what??? Ans: it should already be in the current node
       } else {
         // set up info to request data from other nodes
         (*p_cur_insert)[m_parents_pr[root]].push_back(0); // flag: 0 means query and 1 means a reply
@@ -358,7 +357,6 @@ namespace NWUClustering {
           merge_received[tid].clear();
           merge_received[tid].assign(irecv[tid], -1); // resize the vector and assign the values to -1
           /*
-            TODO is this the corresponding Irecv() to the Isend() above???
             Starts a standard-mode, nonblocking receive.
             int MPI_Irecv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request)
           */
@@ -506,7 +504,7 @@ namespace NWUClustering {
         }
       }
     }
-    // TODO this block above AND below seem troubling...
+    
     for(i = 0; i < m_pts->m_i_num_points; i++) {
       if(m_parents_pr[i] == rank) {
         if(m_parents[i] != i) { //skip the noise points
@@ -748,7 +746,6 @@ namespace NWUClustering {
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
     // initialize some parameters
-    dbs.m_clusters.clear(); // TODO not even used
       
     // assign parent to itestf
     dbs.m_parents.resize(dbs.m_pts->m_i_num_points, -1);
@@ -817,7 +814,7 @@ namespace NWUClustering {
     if(rank == proc_of_interest) cout << "Init time " << MPI_Wtime() - start << endl; 
 
     MPI_Barrier(MPI_COMM_WORLD);
-    // TODO continue here
+    
     // the main part of the DBSCAN algorithm (called local computation)
     start = MPI_Wtime();
     for(i = 0; i < dbs.m_pts->m_i_num_points; i++) {
@@ -976,7 +973,7 @@ namespace NWUClustering {
           scount++;
         }
       }
-      // TODO need a MPI_Wait()
+      
       MPI_Alltoall(&isend[0], 1, MPI_INT, &irecv[0], 1, MPI_INT, MPI_COMM_WORLD);
 
       rcount = 0;
