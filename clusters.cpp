@@ -47,8 +47,6 @@ namespace NWUClustering {
   // Adds points to a cluster object
     // Called in geometric_partitioning.cpp
   bool Clusters::addPoints(int source, int buf_size, int dims, vector<float>& raw_data) {
-    int rank;// TODO not even used
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);// TODO not even used
 
     // used as itterables
     int i, j, k; 
@@ -97,8 +95,6 @@ namespace NWUClustering {
   // Updates OUTER points' cluster IDs
     // Called in geometric_partitioning.cpp
   bool Clusters::updatePoints(vector< vector<int> >& raw_ind) {
-    int rank;// TODO not even used
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);// TODO not even used
     
     // used as itterables
     int i, j = -1;
@@ -129,7 +125,7 @@ namespace NWUClustering {
     According to the README, 'num_points' & 'dims' HAVE to be the 1st 2 things in the file (each 4 bytes).
   */
   int Clusters::read_file(char* infilename, int isBinaryFile) {
-    ssize_t numBytesRead; // TODO this isn't even used
+    
     // used as itterables
     int i, j;
     // rank = current node's ID, nproc = total number of nodes in the system
@@ -195,8 +191,8 @@ namespace NWUClustering {
         // fseek to the respective position of the file
         file.seekg(lower * dims * sizeof(point_coord_type), ios::cur);
         // loop over the area of the file for the node
-          // TODO possible speed up: put 'upper - lower' into a local variable...
-        for (i = 0; i < upper - lower; i++) {
+        int delta = upper - lower;
+        for (i = 0; i < delta; i++) {
           // signature: istream& read (char* s, streamsize n);
           // Extracts n characters from the stream and stores them in the array pointed to by s.
           file.read((char*)pt, dims * sizeof(point_coord_type));
@@ -233,8 +229,7 @@ namespace NWUClustering {
   
   // Called from mpi_main...
   int Clusters::build_kdtree() {
-    int rank;// TODO not even used
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);// TODO not even used
+
     // if the Point objects weren't created, don't bother going further...
     if(m_pts == NULL) {
       cout << "Point set is empty" << endl;
@@ -253,8 +248,6 @@ namespace NWUClustering {
   } 
   // Called from mpi_main...
   int Clusters::build_kdtree_outer() {
-    int rank;// TODO not even used
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);// TODO not even used
     
     if(m_pts_outer == NULL) {
       cout << "Outer point set is empty" << endl;
