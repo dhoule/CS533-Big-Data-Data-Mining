@@ -133,19 +133,6 @@ void kdtree2::build_tree() {
     ind[i] = i;
 
   root = build_tree_for_range(0,N-1,NULL);
-
-  #ifdef _DEBUG
-  int rank, regular_median_total, not_regular_median_total;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Allreduce(&regular_median, &regular_median_total, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(&not_regular_median, &not_regular_median_total, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-  if(rank == proc_of_interest) cout << "proc " << rank << " regular_median_total " << regular_median_total << " not_regular_median_total " << not_regular_median_total << endl; 
-  #endif
-
-  //int rank;
-  //MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  //cout << "rank " << rank << endl;
-  //root = build_tree_for_range(0,N-1,NULL); 
 }
 
 kdtree2_node* kdtree2::build_tree_for_range(int l, int u, kdtree2_node* parent) {
@@ -207,24 +194,6 @@ kdtree2_node* kdtree2::build_tree_for_range(int l, int u, kdtree2_node* parent) 
       m = (l+u)/2;
       select_on_coordinate(c,m,l,u);  
     } else {
-      
-      /*
-      float sum; 
-      float average;
-
-      if (true) {
-        sum = 0.0;
-        for (int k=l; k <= u; k++) {
-          sum += the_data[ind[k]][c];
-        }
-        average = sum / static_cast<float> (u-l+1);
-      } else {
-        // average of top and bottom nodes.
-        average = (node->box[c].upper + node->box[c].lower)*0.5; 
-      }
-      
-      m = select_on_coordinate_value(c,average,l,u);
-      */
 
       // instead of mean, use median
 
@@ -241,15 +210,12 @@ kdtree2_node* kdtree2::build_tree_for_range(int l, int u, kdtree2_node* parent) 
       data.clear();
 
       m = select_on_coordinate_value(c,median,l,u);
-      //data.clear();
 
     // END OF ADDITIONAL CODE   
     }
 
     if(m <=l || m >= u) {
-      //cout << "NOT a good partition l " << l << " m " << m << " u " << u << endl;
       m = (l + u) /2;
-      //cout << "Later value l " << l << " m " << m << " u " << u << endl;
       #ifdef _DEBUG
       not_regular_median++;
       #endif
@@ -318,9 +284,6 @@ void kdtree2:: spread_in_coordinate(int c, int l, int u, interval& interv) {
 
     if (lmin > lmax) {
       swap(lmin,lmax); 
-      //      float t = lmin;
-      //      lmin = lmax;
-      //      lmax = t;
     }
 
     if (smin > lmin) smin = lmin;
@@ -334,7 +297,6 @@ void kdtree2:: spread_in_coordinate(int c, int l, int u, interval& interv) {
   }
   interv.lower = smin;
   interv.upper = smax;
-  //  printf("Spread in coordinate %d=[%f,%f]\n",c,smin,smax);
 }
 
 
@@ -384,31 +346,6 @@ int kdtree2::select_on_coordinate_value(int c, float alpha, int l, int u) {
     return(lb-1);
   
 }
-
-
-// void kdtree2::dump_data() {
-//   int upper1, upper2;
-  
-//   upper1 = N;
-//   upper2 = dim;
-
-//   printf("Rearrange=%d\n",rearrange);
-//   printf("N=%d, dim=%d\n", upper1, upper2);
-//   for (int i=0; i<upper1; i++) {
-//     printf("the_data[%d][*]=",i); 
-//     for (int j=0; j<upper2; j++)
-//       printf("%f,",the_data[i][j]); 
-//     printf("\n"); 
-//   }
-//   for (int i=0; i<upper1; i++)
-//     printf("Indexes[%d]=%d\n",i,ind[i]); 
-//   for (int i=0; i<upper1; i++) {
-//     printf("data[%d][*]=",i); 
-//     for (int j=0; j<upper2; j++)
-//       printf("%f,",(*data)[i][j]); 
-//     printf("\n"); 
-//   }
-// }
 
 
 
@@ -503,15 +440,14 @@ void kdtree2::n_nearest_around_point(int idxin, int correltime, int nn, kdtree2_
     qv[i] = the_data[idxin][i]; 
   }
   // copy the query vector.
-  
-  // {
+
   searchrecord sr(qv, *this, result);
   // construct the search record.
   sr.centeridx = idxin;
   sr.correltime = correltime;
   sr.nn = nn; 
   root->search(sr); 
-  // }
+
 
   if (sort_results) sort(result.begin(), result.end());
     
@@ -538,7 +474,7 @@ void kdtree2::r_nearest(vector<float>& qv, float r2, kdtree2_result_vector& resu
 
 int kdtree2::r_count(vector<float>& qv, float r2) {
   // search for all within a ball of a certain radius
-  // {
+
   kdtree2_result_vector result; 
   searchrecord sr(qv,*this,result);
 
@@ -549,7 +485,7 @@ int kdtree2::r_count(vector<float>& qv, float r2) {
   
   root->search(sr); 
   return(result.size());
-  // }
+
 }
 
 void kdtree2::r_nearest_around_point(int idxin, int correltime, float r2, kdtree2_result_vector& result) {
@@ -561,8 +497,7 @@ void kdtree2::r_nearest_around_point(int idxin, int correltime, float r2, kdtree
     qv[i] = the_data[idxin][i]; 
   }
   // copy the query vector.
-  
-  // {
+
   searchrecord sr(qv, *this, result);
   // construct the search record.
   sr.centeridx = idxin;
@@ -570,7 +505,6 @@ void kdtree2::r_nearest_around_point(int idxin, int correltime, float r2, kdtree
   sr.ballsize = r2; 
   sr.nn = 0; 
   root->search(sr); 
-  // }
 
   if (sort_results) sort(result.begin(), result.end());
     
@@ -585,8 +519,7 @@ int kdtree2::r_count_around_point(int idxin, int correltime, float r2) {
     qv[i] = the_data[idxin][i]; 
   }
   // copy the query vector.
-  
-  // {
+
   kdtree2_result_vector result; 
   searchrecord sr(qv, *this, result);
   // construct the search record.
@@ -595,8 +528,7 @@ int kdtree2::r_count_around_point(int idxin, int correltime, float r2) {
   sr.ballsize = r2; 
   sr.nn = 0; 
   root->search(sr); 
-  return(result.size());
-  // }  
+  return(result.size()); 
 }
 
 // 
@@ -850,12 +782,9 @@ void kdtree2_node::process_terminal_node_fixedball(searchrecord& sr) {
       if (abs(indexofi-centeridx) < correltime) continue; // skip this point. 
     }
 
-    // {
     kdtree2_result e;
     e.idx = indexofi;
     e.dis = dis;
     sr.result.push_back(e);
-    // }
-
   }
 }
