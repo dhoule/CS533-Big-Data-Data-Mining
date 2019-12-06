@@ -748,7 +748,7 @@ namespace NWUClustering {
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
     // initialize some parameters
-    dbs.m_clusters.clear();
+    dbs.m_clusters.clear(); // TODO not even used
       
     // assign parent to itestf
     dbs.m_parents.resize(dbs.m_pts->m_i_num_points, -1);
