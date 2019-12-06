@@ -46,7 +46,6 @@ namespace NWUClustering {
       kdtree2*      m_kdtree_outer;
 
       vector <int>  m_pid_to_cid; // point id to cluster id
-      vector <vector <int> > m_clusters; // TODO not even used
   };
 };
 
