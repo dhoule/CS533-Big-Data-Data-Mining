@@ -126,99 +126,12 @@ namespace NWUClustering {
         (*parser)[i].clear();
       }
     }
-    // assign the first element the value of unique cluster IDs
-    // (*data)[0] = pid_count; 
-    // "computed" is the new size of the 'data' vector
-    // comp = (*data).size(); 
     // Get the stopping time of the function, increase the incrimenter
     double stop = MPI_Wtime();
     comtime += (stop - start);
     // increase the "speed up" incrementer
     sum_comp_rate += (comp / org);
   }
-
-  // called in run_dbscan_algo_uf_mpi_interleaved(), but is commented out.
-    // the comments above it talk about "compression"
-    // seems to be older code of trivial_compression(), but wasn't taken out.
-  /*
-  void ClusteringAlgo::convert(vector < vector <int> >* data, int nproc, int rank, int round) {
-    int j, tid, size, pid, v1, v2, pairs, count;
-    vector < vector <int> > parser;
-    vector <int> init, verify;
-    int min, max;
-
-    for(tid = 0; tid < nproc; tid++) {
-      pairs = (*data)[tid].size()/2;
-      
-      verify.resize(2 * pairs, -1);
-
-      if(pairs == 0)
-        continue;
-
-      min = m_pts->m_i_num_points;
-      max = -1;
-      for(pid = 0; pid < pairs; pid++) {
-        if((*data)[tid][2 * pid] < min)
-          min = (*data)[tid][2 * pid];
-        
-        if((*data)[tid][2 * pid] > max)
-          max  = (*data)[tid][2 * pid];
-
-        verify[2 * pid] = (*data)[tid][2 * pid];
-        verify[2 * pid + 1] = (*data)[tid][2 * pid + 1];
-      }
-
-      init.clear();
-      parser.resize(max - min + 1, init);
-      
-      for(pid = 0; pid < pairs; pid++) {
-        v2 = (*data)[tid].back();
-        (*data)[tid].pop_back();
-
-        v1 = (*data)[tid].back();
-                    (*data)[tid].pop_back();
-
-        parser[v1 - min].push_back(v2);
-      }
-
-      count = 0;
-      (*data)[tid].push_back(-1); // insert local root count later
-
-      for(pid = min; pid <= max; pid++) {
-        size = parser[pid - min].size();
-        if(size > 0) {
-          count++;
-          (*data)[tid].push_back(pid);
-          (*data)[tid].push_back(size);
-
-          for(j = 0; j < size; j++) {
-            (*data)[tid].push_back(parser[pid - min].back());
-            parser[pid - min].pop_back();
-          }
-        }
-      }
-
-      (*data)[tid][0] = count;
-      parser.clear();
-
-      count = (*data)[tid][0];
-      int k = 1, size, u = 0;
-      for(pid = 0; pid < count; pid++) {   
-        v2 = (*data)[tid][k++];
-        size = (*data)[tid][k++];
-
-        for(j = k; j < size; j++, k++) {
-          v1 = (*data)[tid][k++];
-
-          if(v2 != verify[u++])
-            cout << "SOMETHING IS WRONG" << endl;
-
-          if(v1 != verify[u++])
-            cout << "SOMETHING IS WRONG" << endl;
-        } 
-      }
-    }
-  } */
 
   // called in mpi_main.cpp.
     // The function merges Points from other nodes
@@ -299,9 +212,7 @@ namespace NWUClustering {
         local_continue_to_run++; // increase msg counter
       }     
     }
-    
-    // MAY BE REMOVED
-    //MPI_Barrier(MPI_COMM_WORLD);
+
     /*
       pos = used in MPI_Waitany(), for the `index` attribute
       quadraples = used to determine how many points have actually been sent to a node
@@ -436,8 +347,6 @@ namespace NWUClustering {
         MPI_Waitall(scount, &d_req_send[0], &d_stat_send[0]); // wait for all the sending operation
     }
 
-    // MAY BE REMOVED
-    //MPI_Barrier(MPI_COMM_WORLD);
     /* 
       `final_cluster_root` = number of clusters in the current node
       `total_final_cluster_root` = total number of clusters
@@ -950,12 +859,6 @@ namespace NWUClustering {
       p_cur_send = pswap;
       for(tid = 0; tid < nproc; tid++)
         (*p_cur_insert)[tid].clear();
-
-      // Uncommend the following if you want to compress in the first round, where compression ratio could be high
-      //if(dbs.m_compression == 1 && i == 0)
-      //{
-      //  dbs.trivial_compression(p_cur_send, &parser, nproc, rank, i, comtime, sum_comp_rate);
-      //}
     
       scount = 0;
       for(tid = 0; tid < nproc; tid++) {
