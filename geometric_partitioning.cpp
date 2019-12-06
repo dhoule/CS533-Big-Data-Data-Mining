@@ -337,8 +337,6 @@ namespace NWUClustering {
 
     // compute the local bouding box for each dimention
     interval* box = new interval[dbs.m_pts->m_i_dims];
-    //compute_local_bounding_box(dbs, box);
-    // we don't need to compute as we have stored this while reading
     
     for(i = 0; i < dbs.m_pts->m_i_dims; i++) { 
       box[i].upper = dbs.m_pts->m_box[i].upper;
@@ -384,7 +382,6 @@ namespace NWUClustering {
     #ifdef _DEBUG
     if(rank == proc_of_interest)
     { cout << "proc " << rank << " nodes " << internal_nodes << " loops "<< loops << endl;    
-      print_points(dbs, rank);
     }
     #endif
     */
@@ -470,7 +467,6 @@ namespace NWUClustering {
       {
         cout << "proc " << rank << " sub proc " << sub_rank << " median " << median << " of dimension " << d << " points to recv " << r_count << " points to send " << s_count << " partner " << partner_rank << endl;      
         
-        print_points(dbs, rank);
       }
       #endif
 
@@ -511,15 +507,6 @@ namespace NWUClustering {
           #endif
     */
 
-    /*compute_local_bounding_box(dbs, box);
-
-    #ifdef _DEBUG
-    if(rank == proc_of_interest)
-    {
-      print_box(dbs, rank, box);
-    }
-    #endif
-    */
 
     // free the allocated memory
     for(i = 0; i < nproc; i++)
@@ -780,44 +767,6 @@ namespace NWUClustering {
       target_box[j].upper = source_box[j].upper;
       target_box[j].lower = source_box[j].lower;
     }
-  }
-
-  void print_points(ClusteringAlgo& dbs, int rank) {
-    cout << "proc " << rank << " owned points: " << dbs.m_pts->m_points.size() << " verify " << dbs.m_pts->m_i_num_points << endl;
-    int u, v;
-
-    /*
-    for(u = 0; u < dbs.m_pts->m_i_num_points; u++)
-        {
-          for(v = 0; v < dbs.m_pts->m_i_dims; v++)
-              cout << dbs.m_pts->m_points[u][v] << " ";
-            cout << endl;
-        }
-    */
-
-    cout << "proc " << rank << " outer points: " << dbs.m_pts_outer->m_points.size() << " verify " << dbs.m_pts_outer->m_i_num_points << endl;
-
-    /*
-    for(u = 0; u < dbs.m_pts_outer->m_i_num_points; u++)
-        {
-            for(v = 0; v < dbs.m_pts_outer->m_i_dims; v++)
-                cout << dbs.m_pts_outer->m_points[u][v] << " ";
-            cout << endl;
-        }
-    */
-  }
-
-  void print_box(ClusteringAlgo& dbs, int rank, interval* box) {
-    cout << "proc " << rank << " bbox: ";
-
-    for(int v = 0; v < dbs.m_pts->m_i_dims; v++) {
-      if(v == dbs.m_pts->m_i_dims - 1)
-        cout << "(" << box[v].upper << ", " << box[v].lower << ")";
-      else
-        cout << "(" << box[v].upper << ", " << box[v].lower << "), ";
-    }
-
-    cout << endl;
   }
 };
 
