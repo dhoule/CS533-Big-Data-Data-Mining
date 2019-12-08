@@ -26,11 +26,9 @@
 #ifndef _UTILS_
 #define _UTILS_
 
-//#define _DEBUG
 #define proc_of_interest 0
 #define _GET_EXTRA_POINT_STAT 0
 #define _GET_LOCAL_POINT_COUNT 0
-//#define NETCDF_FORMAT
 
 #include <mpi.h>
 #include <algorithm>
@@ -62,7 +60,9 @@ float findKMedian(vector<float>& A,int K);
 
 static void handle_error(int status, int lineno) {
   fprintf(stderr, "Error at line %d: %s\n", lineno, ncmpi_strerror(status));
-//  MPI_Abort(MPI_COMM_WORLD, 1);
+  //Terminates MPI execution environment.
+    // int MPI_Abort(MPI_Comm comm, int errorcode)
+  // MPI_Abort(MPI_COMM_WORLD, status); // Not sure about deleting this. Updated
 }
 
 
