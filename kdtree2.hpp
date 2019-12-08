@@ -59,9 +59,6 @@ public:
   float replace_maxpri_elt_return_new_maxpri(kdtree2_result&);
 
   float max_value(); 
-  // return the distance which has the maximum value of all on list, 
-  // assuming that ALL insertions were made by
-  // push_element_and_heapify() 
 };
 
 
@@ -176,41 +173,36 @@ private:
 
 
 class kdtree2_node {
-public:
-  // constructor
-  kdtree2_node(int dim);
-  //, int cut_dim_in,
-  //         float cut_val_in, float cut_val_left_in, 
-  //         float cut_val_right_in);
-  // destructor
-  ~kdtree2_node();
+  public:
+    // constructor
+    kdtree2_node(int dim);
+    // destructor
+    ~kdtree2_node();
 
-private:
-  // visible to self and kdtree2.
-  friend class kdtree2;  // allow kdtree2 to access private 
+  private:
+    // visible to self and kdtree2.
+    friend class kdtree2;  // allow kdtree2 to access private 
 
-  int cut_dim;                                 // dimension to cut; 
-  float cut_val, cut_val_left, cut_val_right;  //cut value
-  int l,u;  // extents in index array for searching
+    int cut_dim; // dimension to cut; 
+    float cut_val, cut_val_left, cut_val_right;  //cut value
+    int l,u;  // extents in index array for searching
 
-  vector<interval> box; // [min,max] of the box enclosing all points
-  
-  kdtree2_node *left, *right;  // pointers to left and right nodes. 
+    vector<interval> box; // [min,max] of the box enclosing all points
+    
+    kdtree2_node *left, *right;  // pointers to left and right nodes. 
 
-  void search(searchrecord& sr); 
-  // recursive innermost core routine for searching.. 
+    void search(searchrecord& sr); 
+    // recursive innermost core routine for searching.. 
 
-  bool box_in_search_range(searchrecord& sr);
-  // return true if the bounding box for this node is within the
-  // search range given by the searchvector and maximum ballsize in 'sr'. 
+    bool box_in_search_range(searchrecord& sr);
+    // return true if the bounding box for this node is within the
+    // search range given by the searchvector and maximum ballsize in 'sr'. 
 
-  void check_query_in_bound(searchrecord& sr); // debugging only
+    void check_query_in_bound(searchrecord& sr); // debugging only
 
-  // for processing final buckets. 
-  void process_terminal_node(searchrecord& sr);
-  void process_terminal_node_fixedball(searchrecord& sr);
-
-
+    // for processing final buckets. 
+    void process_terminal_node(searchrecord& sr);
+    void process_terminal_node_fixedball(searchrecord& sr);
 };
 
 
