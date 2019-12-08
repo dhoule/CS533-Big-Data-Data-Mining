@@ -43,17 +43,13 @@ static void usage(char *argv0) {
 
 // TODO splicing compression technique, using "Rem's union-find technique": https://algocoding.wordpress.com/2015/05/13/simple-union-find-techniques/#more-1395
 int main(int argc, char** argv) {
-  double  seconds;
   int   opt;
-
-  int   minPts, procs;
-  double  eps;
+  int   minPts;
+  double  eps, start;
   char*   outfilename;
   int     isBinaryFile;
   char*   infilename;
-
   int rank, nproc;
-  MPI_Status status;
 
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -65,7 +61,7 @@ int main(int argc, char** argv) {
   isBinaryFile = 1; // default binary file
   outfilename = NULL;
   infilename = NULL;
-  // determine command line options
+  // determine command line options // TODO need to modify this for SNG Alg
   while ((opt=getopt(argc,argv,"i:m:e:o:?b"))!= EOF) {
     switch (opt) {
       case 'i':
@@ -115,12 +111,12 @@ int main(int argc, char** argv) {
   // declaring the ClusteringAlgo object 'dbs'
   NWUClustering::ClusteringAlgo dbs;
   // initialize some paramaters
-  dbs.set_dbscan_params(eps, minPts);
+  dbs.set_dbscan_params(eps, minPts); // TODO need to modify this for SNG Alg
 
   if(rank == proc_of_interest) cout << "Epsilon: " << eps << " MinPts: " << minPts << endl;
   // Make ALL of the nodes/processes wait till they ALL get to this point
   MPI_Barrier(MPI_COMM_WORLD);
-  double start = MPI_Wtime();
+  start = MPI_Wtime();
 
   if(rank == proc_of_interest) cout << "Reading points from file: " << infilename << endl;
   // determine if there was an error reading from the binary file
@@ -151,8 +147,8 @@ int main(int argc, char** argv) {
   dbs.build_kdtree_outer();
   MPI_Barrier(MPI_COMM_WORLD);
   if(rank == proc_of_interest) cout << "Build kdtree took " << MPI_Wtime() - start << " seconds [pre_processing]" << endl;
-  
   if(rank == proc_of_interest) cout << endl;  
+  
   //run the DBSCAN algorithm
   start = MPI_Wtime();
   run_dbscan_algo_uf_mpi_interleaved(dbs);
