@@ -52,7 +52,7 @@ namespace NWUClustering {
     Function keeps track of the time it takes to complete for some reason.
     called in run_dbscan_algo_uf_mpi_interleaved()
   */
-  void ClusteringAlgo::trivial_decompression(vector <int>* data, int nproc, int rank, int round, double& dcomtime) {
+  void ClusteringAlgo::trivial_decompression(vector <int>* data, int nproc, int rank, double& dcomtime) {
     double start = MPI_Wtime();
     
     vector <int> parser;
@@ -84,7 +84,7 @@ namespace NWUClustering {
   }
 
   // called in run_dbscan_algo_uf_mpi_interleaved()
-  void ClusteringAlgo::trivial_compression(vector <int>* data, vector < vector <int> >* parser, int nproc, int rank, int round, double& comtime) {
+  void ClusteringAlgo::trivial_compression(vector <int>* data, vector < vector <int> >* parser, int nproc, int rank, double& comtime) {
     // get the starting time before doing anything in this function
     double start = MPI_Wtime();
     double org = 0;
@@ -852,7 +852,7 @@ namespace NWUClustering {
       scount = 0;
       for(tid = 0; tid < nproc; tid++) {
         if(dbs.m_compression == 1 && i == 0 && (*p_cur_send)[tid].size() > 0) {
-          dbs.trivial_compression(&(*p_cur_send)[tid], &parser, nproc, rank, i, comtime);
+          dbs.trivial_compression(&(*p_cur_send)[tid], &parser, nproc, rank, comtime);
         }
 
         isend[tid] = (*p_cur_send)[tid].size();
@@ -885,7 +885,7 @@ namespace NWUClustering {
           if(i == 0) {
             if(dbs.m_compression == 1) {
               // call the decompression function
-              dbs.trivial_decompression(&merge_received[rsource], nproc, rank, i, dcomtime);
+              dbs.trivial_decompression(&merge_received[rsource], nproc, rank, dcomtime);
 
               triples = merge_received[rsource].size()/2;
               par_proc = rsource;
