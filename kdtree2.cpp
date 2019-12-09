@@ -380,8 +380,7 @@ private:
   // constructor
 
 public:
-  searchrecord(vector<float>& qv_in, kdtree2& tree_in,
-         kdtree2_result_vector& result_in) :  
+  searchrecord(vector<float>& qv_in, kdtree2& tree_in, kdtree2_result_vector& result_in) :  
     qv(qv_in),
     result(result_in),
     data(tree_in.data),
