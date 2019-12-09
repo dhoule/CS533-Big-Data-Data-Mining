@@ -222,8 +222,10 @@ namespace NWUClustering {
     }
     return 0;
   }
-  
-  // Called from mpi_main...
+  /*
+   Called from mpi_main...
+   Builds the kd-tree containing the "main" points for the node.
+  */
   int Clusters::build_kdtree() {
 
     // if the Point objects weren't created, don't bother going further...
@@ -242,7 +244,10 @@ namespace NWUClustering {
 
     return 0;   
   } 
-  // Called from mpi_main...
+  /*
+   Called from mpi_main...
+   Builds the kd-tree containing the outer points for the node.
+  */
   int Clusters::build_kdtree_outer() {
     
     if(m_pts_outer == NULL) {
