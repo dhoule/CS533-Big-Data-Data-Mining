@@ -54,8 +54,6 @@ namespace NWUClustering {
   */
   void ClusteringAlgo::trivial_decompression(vector <int>* data, int nproc, int rank, int round, double& dcomtime) {
     double start = MPI_Wtime();
-    int irank; 
-    MPI_Comm_rank(MPI_COMM_WORLD, &irank); 
     
     vector <int> parser;
     // allocates a MINIMUM amount of memory, the size of 'data'
@@ -81,9 +79,8 @@ namespace NWUClustering {
     // removes all elements, destroying them. The size becomes 0.
     parser.clear();
 
-    double stop = MPI_Wtime();
     // increment the time counter
-    dcomtime += (stop - start);
+    dcomtime += (MPI_Wtime() - start);
   }
 
   // called in run_dbscan_algo_uf_mpi_interleaved()
@@ -92,8 +89,6 @@ namespace NWUClustering {
     double start = MPI_Wtime();
     double org = 0, comp = 0;
     int pairs, pid, npid, i, j, pid_count, npid_count;
-    int irank; 
-    MPI_Comm_rank(MPI_COMM_WORLD, &irank); 
 
     // The number of "pairs" in the "data" vector
     pairs = (*data).size()/2; 
@@ -126,8 +121,7 @@ namespace NWUClustering {
       }
     }
     // Get the stopping time of the function, increase the incrimenter
-    double stop = MPI_Wtime();
-    comtime += (stop - start);
+    comtime += (MPI_Wtime() - start);
     // increase the "speed up" incrementer
     sum_comp_rate += (comp / org);
   }
@@ -801,14 +795,12 @@ namespace NWUClustering {
     MPI_Barrier(MPI_COMM_WORLD);
 
     int v1, v2, par_proc, triples, local_count, global_count;
-    double temp_inter_med, inter_med, stop = MPI_Wtime();
+    double temp_inter_med, inter_med;
 
-    if(rank == proc_of_interest) cout << "Local computation took " << stop - start << endl;
+    if(rank == proc_of_interest) cout << "Local computation took " << MPI_Wtime() - start << endl;
 
     inter_med = MPI_Wtime();
 
-
-    start = stop;
     i = 0;
       
     MPI_Request s_req_recv[nproc], s_req_send[nproc], d_req_send[nproc], d_req_recv[nproc]; 
@@ -1019,8 +1011,7 @@ namespace NWUClustering {
       i++;
     }
 
-    stop = MPI_Wtime(); 
-    if(rank == proc_of_interest) cout << "Merging took " << stop - start << endl;
+    if(rank == proc_of_interest) cout << "Merging took " << MPI_Wtime() - start << endl;
 
     pswap = NULL;
     p_cur_insert = NULL;
