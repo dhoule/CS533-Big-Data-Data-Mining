@@ -84,7 +84,7 @@ namespace NWUClustering {
   }
 
   // called in run_dbscan_algo_uf_mpi_interleaved()
-  void ClusteringAlgo::trivial_compression(vector <int>* data, vector < vector <int> >* parser, int nproc, int rank, double& comtime) {
+  void ClusteringAlgo::trivial_compression(vector <int>* data, vector < vector <int> >* parser, int nproc, int rank) {
     // get the starting time before doing anything in this function
     double start = MPI_Wtime();
     double org = 0;
@@ -120,8 +120,6 @@ namespace NWUClustering {
         (*parser)[i].clear();
       }
     }
-    // Get the stopping time of the function, increase the incrimenter
-    comtime += (MPI_Wtime() - start);
   }
 
   // called in mpi_main.cpp.
@@ -837,7 +835,7 @@ namespace NWUClustering {
     //message_per_round
     int uv, uf, um, ul, ucount;
     int local_continue_to_run, global_continue_to_run;
-    double dcomtime = 0, comtime = 0;
+    double dcomtime = 0;
     vector <vector <int> > parser;
     vector <int> init_ex;
     parser.resize(dbs.m_pts->m_i_num_points, init_ex);
@@ -852,7 +850,7 @@ namespace NWUClustering {
       scount = 0;
       for(tid = 0; tid < nproc; tid++) {
         if(dbs.m_compression == 1 && i == 0 && (*p_cur_send)[tid].size() > 0) {
-          dbs.trivial_compression(&(*p_cur_send)[tid], &parser, nproc, rank, comtime);
+          dbs.trivial_compression(&(*p_cur_send)[tid], &parser, nproc, rank);
         }
 
         isend[tid] = (*p_cur_send)[tid].size();
