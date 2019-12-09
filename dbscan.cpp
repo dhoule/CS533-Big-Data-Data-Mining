@@ -36,7 +36,6 @@ namespace NWUClustering {
     
     m_epsSquare =  eps * eps;
     m_minPts =  minPts;
-    m_messages_per_round = -1; // always -1
     m_compression = 0; // can set to 1 if want to compress specailly in the first round of communication
   }
 
@@ -893,7 +892,7 @@ namespace NWUClustering {
         rsource = d_stat.MPI_SOURCE;  
         if(rtag == tag + 1) {
           // process received the data now
-          if(dbs.m_messages_per_round == -1 && i == 0) {
+          if(i == 0) {
             if(dbs.m_compression == 1) {
               // call the decompression function
               dbs.trivial_decompression(&merge_received[rsource], nproc, rank, i, dcomtime);
@@ -913,7 +912,7 @@ namespace NWUClustering {
             v1 = merge_received[rsource].back();
             merge_received[rsource].pop_back();
             
-            if((dbs.m_messages_per_round == -1 && i > 0) || (dbs.m_messages_per_round != -1)) {
+            if(i > 0) {
               par_proc = merge_received[rsource].back();
               merge_received[rsource].pop_back();
             }
