@@ -31,9 +31,6 @@ namespace NWUClustering {
     minPts = minimum number of points need to make a cluster
   */
   void ClusteringAlgo::set_dbscan_params(double eps, int minPts) {
-    int rank; 
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-    
     m_epsSquare =  eps * eps;
     m_minPts =  minPts;
     m_compression = 0; // can set to 1 if want to compress specailly in the first round of communication
@@ -375,17 +372,16 @@ namespace NWUClustering {
       int MPI_Allgather(const void *sendbuf, int  sendcount, MPI_Datatype sendtype, void *recvbuf[starting address], int recvcount, MPI_Datatype recvtype, MPI_Comm comm)
     */
     MPI_Allgather(&final_cluster_root, sizeof(int), MPI_BYTE, &global_roots[0], sizeof(int), MPI_BYTE, MPI_COMM_WORLD); 
+    
     /*
       Determine the range of available IDs for each node by determining the largest number of roots on a single node
+      `cluster_offset` = used to assign cluster IDs
     */
-    int range = -1;
-    for(i = 0; i < nproc; i++)
-      if(range < global_roots[i])
-        range = global_roots[i];
-
-    // `cluster_offset` = used to assign cluster IDs
-    int cluster_offset = (rank * range) + 1; // +1 because 0 is the noise ID
-
+    int cluster_offset = 0;
+    // every node only goes so far as its `rank` in the system
+    for(i = 0; i <= rank; i++) 
+      cluster_offset += global_roots[i];
+    // `cluster_offset` becomes the MAX value for cluster IDs on a node
     // declared in cluster.h: vector <int>  m_pid_to_cid;
     m_pid_to_cid.clear(); // point ID to cluster ID. 1st use of this var in this function.
     m_pid_to_cid.resize(m_pts->m_i_num_points, -1);
@@ -396,7 +392,7 @@ namespace NWUClustering {
         // if the number of points is greater than 1
         if(m_child_count[i] > 1) { 
           m_pid_to_cid[i] = cluster_offset;
-          cluster_offset++;
+          cluster_offset--;
         } else {
           m_pid_to_cid[i] = 0; // noise point
         }
