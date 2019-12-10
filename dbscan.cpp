@@ -49,7 +49,7 @@ namespace NWUClustering {
     Function keeps track of the time it takes to complete for some reason.
     called in run_dbscan_algo_uf_mpi_interleaved()
   */
-  void ClusteringAlgo::trivial_decompression(vector <int>* data, int nproc, int rank, double& dcomtime) {
+  void ClusteringAlgo::trivial_decompression(vector <int>* data, int nproc) {
     double start = MPI_Wtime();
     
     vector <int> parser;
@@ -75,13 +75,10 @@ namespace NWUClustering {
     }
     // removes all elements, destroying them. The size becomes 0.
     parser.clear();
-
-    // increment the time counter
-    dcomtime += (MPI_Wtime() - start);
   }
 
   // called in run_dbscan_algo_uf_mpi_interleaved()
-  void ClusteringAlgo::trivial_compression(vector <int>* data, vector < vector <int> >* parser, int nproc, int rank) {
+  void ClusteringAlgo::trivial_compression(vector <int>* data, vector < vector <int> >* parser, int nproc) {
     // get the starting time before doing anything in this function
     double start = MPI_Wtime();
     double org = 0;
@@ -831,7 +828,7 @@ namespace NWUClustering {
     //message_per_round
     int uv, uf, um, ul, ucount;
     int local_continue_to_run, global_continue_to_run;
-    double dcomtime = 0;
+
     vector <vector <int> > parser;
     vector <int> init_ex;
     parser.resize(dbs.m_pts->m_i_num_points, init_ex);
@@ -846,7 +843,7 @@ namespace NWUClustering {
       scount = 0;
       for(tid = 0; tid < nproc; tid++) {
         if(dbs.m_compression == 1 && i == 0 && (*p_cur_send)[tid].size() > 0) {
-          dbs.trivial_compression(&(*p_cur_send)[tid], &parser, nproc, rank);
+          dbs.trivial_compression(&(*p_cur_send)[tid], &parser, nproc);
         }
 
         isend[tid] = (*p_cur_send)[tid].size();
@@ -879,7 +876,7 @@ namespace NWUClustering {
           if(i == 0) {
             if(dbs.m_compression == 1) {
               // call the decompression function
-              dbs.trivial_decompression(&merge_received[rsource], nproc, rank, dcomtime);
+              dbs.trivial_decompression(&merge_received[rsource], nproc);
 
               triples = merge_received[rsource].size()/2;
               par_proc = rsource;
