@@ -25,19 +25,12 @@
 #include "geometric_partitioning.h"
 
 namespace NWUClustering {
+
   void get_extra_points(ClusteringAlgo& dbs) {
-    #ifdef _DEBUG_GP
-    MPI_Barrier(MPI_COMM_WORLD);
-    double end, start = MPI_Wtime();
-    #endif
 
     int k, rank, nproc, i, j;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
-
-    #ifdef _DEBUG
-    if(rank == proc_of_interest) cout << "extra point time part 0 strating " << endl;
-    #endif
     
     interval* local_box = new interval[dbs.m_pts->m_i_dims];
     compute_local_bounding_box(dbs, local_box);
@@ -121,15 +114,6 @@ namespace NWUClustering {
       }
     }
 
-    #ifdef _DEBUG_GP
-    MPI_Barrier(MPI_COMM_WORLD);
-    end = MPI_Wtime();
-      #ifdef _DEBUG
-      if(rank == proc_of_interest) cout << "extra point time part 2: " << end - start << endl;        
-      #endif
-    start = end;
-    #endif
-
     // now send buf have all the points. Send the size first to everyone
     vector <int> send_buf_size, recv_buf_size;
     send_buf_size.resize(nproc, 0);
@@ -193,15 +177,6 @@ namespace NWUClustering {
     if(send_count > 0)
       MPI_Waitall(send_count, &req_send[0], &stat_send[0]);
 
-    #ifdef _DEBUG_GP
-    MPI_Barrier(MPI_COMM_WORLD);
-    end = MPI_Wtime();
-      #ifdef _DEBUG
-      if(rank == proc_of_interest) cout << "extra point time part 3: " << end - start << endl;        
-      #endif
-    start = end;
-    #endif
-
     // got all the points
     // now update the indices of the outer points
 
@@ -239,10 +214,6 @@ namespace NWUClustering {
     // compute the global bouding box for each dimention
     interval* gbox = new interval[dbs.m_pts->m_i_dims];
     compute_global_bounding_box(dbs, box, gbox, nproc);
-
-    #ifdef _DEBUG
-    if(rank == proc_of_interest) cout << "Partitioning: Pos 1" << endl;
-    #endif
 
     // find the loop count for nproc processors
     int internal_nodes, partner_rank, loops, b, color, sub_rank, d, max, sub_nprocs;

@@ -222,6 +222,7 @@ namespace NWUClustering {
     }
     return 0;
   }
+  
   /*
    Called from mpi_main...
    Builds the kd-tree containing the "main" points for the node.

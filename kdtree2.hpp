@@ -151,10 +151,6 @@ private:
 
   static const int bucketsize = 12;  // global constant. 
   
-  #ifdef _DEBUG 
-  int not_regular_median;
-  int regular_median;
-  #endif
 private:
   void set_data(array2dfloat& din); 
   void build_tree(); // builds the tree.  Used upon construction. 

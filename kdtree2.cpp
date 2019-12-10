@@ -80,10 +80,6 @@ kdtree2::kdtree2(array2dfloat& data_in,bool rearrange_in,int dim_in)
     data(NULL),
     ind(N) {
 
-  #ifdef _DEBUG
-  not_regular_median = 0;
-  regular_median = 0;
-  #endif
   //
   // initialize the constant references using this unusual C++
   // feature.
@@ -216,14 +212,7 @@ kdtree2_node* kdtree2::build_tree_for_range(int l, int u, kdtree2_node* parent) 
 
     if(m <=l || m >= u) {
       m = (l + u) /2;
-      #ifdef _DEBUG
-      not_regular_median++;
-      #endif
     }
-    #ifdef _DEBUG
-    else
-      regular_median++;
-    #endif
 
     // move the indices around to cut on dim 'c'.
     node->cut_dim=c;
