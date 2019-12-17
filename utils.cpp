@@ -25,23 +25,29 @@
 #include "utils.h"
 
 // Find Kth element without recusion
-float findKMedian(vector<float>& A,int K) {
+float findKMedian(vector<float>& A, int K) {
   int l,m;
   l=0;
   m=A.size()-1;
-  while (l<m) {
+  while (l < m) {
     float x=A[K];
     int i=l;
     int j=m;
     do {
-      while (A[i]<x) i++;
-        while (x<A[j]) j--;
-          if (i<=j) {
-            swap(A[i], A[j]);
-            i++; 
-            j--;
-          }
-    } while (i<=j);
+      while (A[i] < x) // start from the front, and move towards the back
+        i++;
+      while (x < A[j]) // start from the back, and move towards the front
+        j--;
+      if (i <= j) {
+        /*
+          Exchanges the values of a and b.
+          TODO: moved from <algorithm> to <utility> in C++11
+        */
+        swap(A[i], A[j]);
+        i++; 
+        j--;
+      }
+    } while (i <= j);
 
     if (j<K) l=i;
     if (K<i) m=j;
