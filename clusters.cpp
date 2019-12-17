@@ -83,8 +83,8 @@ namespace NWUClustering {
         m_pts_outer->m_points[pos][j] = raw_data[k++]; // TODO possible buffer overflow????????
         
       }
-      // assign the cluster ID for the point
-      m_pts_outer->m_prIDs[pos] = source; // TODO check that source is a cluster ID
+      // assign the Node ID for the point
+      m_pts_outer->m_prIDs[pos] = source; // `source` is the Node that the point is on
       // increment the counter for the key...
       pos++;
     }
