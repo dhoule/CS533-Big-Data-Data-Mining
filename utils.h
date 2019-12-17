@@ -27,8 +27,6 @@
 #define _UTILS_
 
 #define proc_of_interest 0
-#define _GET_EXTRA_POINT_STAT 0
-#define _GET_LOCAL_POINT_COUNT 0
 
 #include <mpi.h>
 #include <algorithm>
