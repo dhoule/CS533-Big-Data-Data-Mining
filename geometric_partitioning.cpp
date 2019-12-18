@@ -236,6 +236,8 @@ namespace NWUClustering {
   /*
     Called from mpi_main.cpp
     Parttition the data file geometrically: preprocessing step
+    Sets up new communication systems for each node.
+    The "partners" for each node are specified when they are set up.
   */
   void start_partitioning(ClusteringAlgo& dbs) {
     int r_count, s_count, rank, nproc, i, j, k;
@@ -422,9 +424,10 @@ namespace NWUClustering {
       MPI_Comm_split(MPI_COMM_WORLD, color, rank, &new_comm);
       MPI_Comm_rank(new_comm, &sub_rank);
 
+      powColor = pow2_i + color; // this computation is done multiple times. Just do it once, and reuse it.
+
       if(sub_rank == 0) {
         d = 0;
-        powColor = pow2_i + color; // this computation is done multiple times. Just do it once, and reuse it.
         for(j = 1; j < dbs.m_pts->m_i_dims; j++) {
           // if the delta of J > delta of D, assign d to j
           if((nodes_gbox[powColor][j].upper - nodes_gbox[powColor][j].lower) > (nodes_gbox[powColor][d].upper - nodes_gbox[powColor][d].lower))
@@ -466,13 +469,19 @@ namespace NWUClustering {
       }
 
       update_points(dbs, s_count, invalid_pos_as, recv_buf);
-      recv_buf.clear();
-  
-      copy_box(dbs, nodes_gbox[LOWER(pow2_i+color)], nodes_gbox[pow2_i+color]);
+      recv_buf.clear(); // free the memory
+      
+      // LOWER() is defined in utils.h as: LOWER(i) (i<<1)
+      copy_box(dbs, nodes_gbox[LOWER(powColor)], nodes_gbox[powColor]);
       nodes_gbox[LOWER(pow2_i+color)][d].upper =  median;
-      copy_box(dbs, nodes_gbox[UPPER(pow2_i+color)], nodes_gbox[pow2_i+color]);
-      nodes_gbox[UPPER(pow2_i+color)][d].lower =  median; 
-
+      // UPPER() is defined in utils.h as: UPPER(i) ((i<<1)+1)
+      copy_box(dbs, nodes_gbox[UPPER(powColor)], nodes_gbox[powColor]);
+      nodes_gbox[UPPER(powColor)][d].lower =  median; 
+      /*
+        Done with the new communication system, so need to get rid of it...
+        Mark a communicator object for deallocation.
+        int MPI_Comm_free(MPI_Comm *comm)
+      */
       MPI_Comm_free(&new_comm);
     }
 
@@ -485,7 +494,7 @@ namespace NWUClustering {
     delete [] box;
 
   }
-
+  // TODO need to investigate this further, using `proc_of_interest` for cout() statements
   void update_points(ClusteringAlgo& dbs, int s_count, vector <int>& invalid_pos_as, vector <float>& recv_buf) {
     int i, j, k, l, r_count = recv_buf.size() / dbs.m_pts->m_i_dims;
     int newPtCt = dbs.m_pts->m_i_num_points + r_count - s_count; // this is used in multiple places, but none of the values change
@@ -640,16 +649,25 @@ namespace NWUClustering {
     }
   }
 
+  /*
+    Determines the upper & lower values of each dimension, for the entire
+    system.
+  */
   void compute_global_bounding_box(ClusteringAlgo& dbs, interval* box, interval* gbox, int nproc) {
     int i, j, k;
   
     interval* gather_local_box = new interval[dbs.m_pts->m_i_dims * nproc];
   
-    // gather the local bounding box first
-    MPI_Allgather(box, sizeof(interval) * dbs.m_pts->m_i_dims, MPI_BYTE, gather_local_box, 
-          sizeof(interval) * dbs.m_pts->m_i_dims, MPI_BYTE, MPI_COMM_WORLD);
+    /* 
+      gather the local bounding box first.
+      Gathers data from all processes and distributes it to all processes.
+      int MPI_Allgather(const void *sendbuf, int  sendcount, MPI_Datatype sendtype, void *recvbuf, 
+                        int recvcount, MPI_Datatype recvtype, MPI_Comm comm)
+    */
+    int sndRcvCt = sizeof(interval) * dbs.m_pts->m_i_dims; // calculation is done a couple of times. Do it once, and use the variable.
+    MPI_Allgather(box, sndRcvCt, MPI_BYTE, gather_local_box, sndRcvCt, MPI_BYTE, MPI_COMM_WORLD);
 
-    // compute the global bounding box
+    // compute the global bounding box, for each dimension
     for(i = 0; i < dbs.m_pts->m_i_dims; i++) {
       gbox[i].lower = gather_local_box[i].lower;
       gbox[i].upper = gather_local_box[i].upper;
@@ -667,6 +685,11 @@ namespace NWUClustering {
     delete [] gather_local_box;
   }
 
+  /*
+    Copies the values of `gbox` into every 1st vector element of `nodes_gbox`.
+    The 1st vector element of `nodes_gbox` is of size `internal_nodes`.
+    The 2nd vector element of `nodes_gbox`, and the size of `gbox`, is the number of dimensions in every point.
+  */
   void copy_global_box_to_each_node(ClusteringAlgo& dbs, interval** nodes_gbox, interval* gbox, int internal_nodes) {
     int i, j;
     for(i = 0; i < internal_nodes; i++) {
@@ -677,6 +700,9 @@ namespace NWUClustering {
     }
   }
   
+  /*
+    Copies the values of one vector of structs, into another
+  */
   void copy_box(ClusteringAlgo& dbs, interval* target_box, interval* source_box) {
     for(int j = 0; j < dbs.m_pts->m_i_dims; j++) {
       target_box[j].upper = source_box[j].upper;
