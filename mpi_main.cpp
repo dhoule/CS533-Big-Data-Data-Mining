@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
   // 'proc_of_interest' defined in utils.h as process 0, the master node
   if(rank == proc_of_interest) cout << "Number of process cores " << nproc << endl;
 
-  // check if nproc is NOT multiple of TWO
+  // check if `nproc` is NOT multiple of TWO
   unsigned int proc_count = nproc;
   // filter command line input, again
   while (((proc_count % 2) == 0) && proc_count > 1) // While x is even and > 1
@@ -164,7 +164,7 @@ int main(int argc, char** argv) {
   if(outfilename != NULL) {
     start = MPI_Wtime();  
 
-    // activate the followingline to write the cluster to file
+    // activate the following line to write the cluster to file
     dbs.writeCluster_distributed(outfilename);
     if(rank == proc_of_interest) cout << "Writing clusterIDs to disk took " << MPI_Wtime() - start << " seconds [pre_processing]"<< endl;
   }
