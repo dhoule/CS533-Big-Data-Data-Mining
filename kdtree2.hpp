@@ -1,19 +1,18 @@
 #ifndef __KDTREE2_HPP
 #define __KDTREE2_HPP
 
-//
-// (c) Matthew B. Kennel, Institute for Nonlinear Science, UCSD (2004)
-//
-// Licensed under the Academic Free License version 1.1 found in file LICENSE
-// with additional provisions in that same file.
+/*
+  (c) Matthew B. Kennel, Institute for Nonlinear Science, UCSD (2004)
 
+  Licensed under the Academic Free License version 1.1 found in file LICENSE
+  with additional provisions in that same file.
+*/
 
-
-//
-// Implement a kd tree for fast searching of points in a fixed data base
-// in k-dimensional Euclidean space.
-//
-// 
+/*
+  Implement a kd tree for fast searching of points in a fixed data base
+  in k-dimensional Euclidean space.
+*/
+ 
 
 #include "utils.h"
 
@@ -27,145 +26,134 @@ typedef struct {
 class kdtree2_node; 
 class searchrecord;
 
-//
-// struct KDTREE2_RESULT
-// class  KDTREE2_RESULT
-//
-
-
+/*
+  struct KDTREE2_RESULT
+  class  KDTREE2_RESULT
+*/
 struct kdtree2_result {
-  // 
-  // the search routines return a (wrapped) vector
-  // of these. 
-  //
-public:
-  float dis;  // its square Euclidean distance
-  int idx;    // which neighbor was found
+  /* 
+    the search routines return a (wrapped) vector
+    of these. 
+  */
+  public:
+    float dis;  // its square Euclidean distance
+    int idx;    // which neighbor was found
 }; 
 
 class kdtree2_result_vector : public vector<kdtree2_result> {
-  // inherit a vector<kdtree2_result>
-  // but, optionally maintain it in heap form as a priority
-  // queue.
-public:
+  /*
+    inherit a vector<kdtree2_result> but, optionally maintain 
+    it in heap form as a priority queue.
+  */
+  public:
 
-  //  
-  // add one new element to the list of results, and
-  // keep it in heap order.  To keep it in ordinary, as inserted,
-  // order, then simply use push_back() as inherited
-  // via vector<> 
+    /* 
+      add one new element to the list of results, and
+      keep it in heap order.  To keep it in ordinary, as inserted,
+      order, then simply use push_back() as inherited
+      via vector<> 
+    */
 
-  void push_element_and_heapify(kdtree2_result&);
-  float replace_maxpri_elt_return_new_maxpri(kdtree2_result&);
+    void push_element_and_heapify(kdtree2_result&);
+    float replace_maxpri_elt_return_new_maxpri(kdtree2_result&);
 
-  float max_value(); 
+    float max_value(); 
 };
 
 
-//
-// class KDTREE2
-//
-// The main data structure, one for each k-d tree, pointing
-// to a tree of an indeterminate number of "kdtree2_node"s.
-//
+/*
+  class KDTREE2
+
+  The main data structure, one for each k-d tree, pointing
+  to a tree of an indeterminate number of "kdtree2_node"s.
+*/
 
 class kdtree2 {
-public: 
-  const array2dfloat& the_data;   
-  // "the_data" is a reference to the underlying multi_array of the
-  // data to be included in the tree.
-  //
-  // NOTE: this structure does *NOT* own the storage underlying this.
-  // Hence, it would be a very bad idea to change the underlying data
-  // during use of the search facilities of this tree.
-  // Also, the user must deallocate the memory underlying it.
+  public: 
+    const array2dfloat& the_data;   
+    /*
+      "the_data" is a reference to the underlying multi_array of the
+      data to be included in the tree.
+    
+      NOTE: this structure does *NOT* own the storage underlying this.
+      Hence, it would be a very bad idea to change the underlying data
+      during use of the search facilities of this tree.
+      Also, the user must deallocate the memory underlying it.
+    */
 
 
-  const int N;   // number of data points
-  int dim; //
-  bool sort_results;  // USERS set to 'true'. 
-  const bool rearrange; // are we rearranging? 
+    const int N;   // number of data points
+    int dim; //
+    bool sort_results;  // USERS set to 'true'. 
+    const bool rearrange; // are we rearranging? 
 
-public:
-  //
-  // constructor, passing in a multi_array<float,2> , aka
-  // array2dfloat. 
-  //
-  // constructor, has optional 'dim_in' feature, to use only
-  // first 'dim_in' components for definition of nearest neighbors.
-  //
+  public:
+    /*
+      constructor, passing in a multi_array<float,2> , aka array2dfloat. 
+    
+      constructor, has optional 'dim_in' feature, to use only
+      first 'dim_in' components for definition of nearest neighbors.
+    */
 
-  kdtree2(array2dfloat& data_in,bool rearrange_in = true,int dim_in=-1);
+    kdtree2(array2dfloat& data_in,bool rearrange_in = true,int dim_in=-1);
 
-  // destructor
-  ~kdtree2();
- 
-public:
-  // search routines
+    // destructor
+    ~kdtree2();
+   
+  public:
+    // search routines
 
-  void n_nearest_brute_force(vector<float>& qv, int nn, kdtree2_result_vector& result);
-  // search for n nearest to a given query vector 'qv' usin
-  // exhaustive slow search.  For debugging, usually.
+    void n_nearest_brute_force(vector<float>& qv, int nn, kdtree2_result_vector& result);
+    // search for n nearest to a given query vector 'qv' usin
+    // exhaustive slow search.  For debugging, usually.
+    
+    void r_nearest(vector<float>& qv, float r2,kdtree2_result_vector& result);
+    // search for all neighbors in ball of size (square Euclidean distance)
+    // r2.   Return number of neighbors in 'result.size()', 
 
-  void n_nearest(vector<float>& qv, int nn, kdtree2_result_vector& result);
-  // search for n nearest to a given query vector 'qv'.
+    void r_nearest_around_point(int idxin, int correltime, float r2, kdtree2_result_vector& result);
+    // like 'r_nearest', but around existing point, with decorrelation
+    // interval. 
 
-  void n_nearest_around_point(int idxin, int correltime, int nn,
-            kdtree2_result_vector& result);
-  // search for 'nn' nearest to point [idxin] of the input data, excluding
-  // neighbors within correltime 
-  
-  void r_nearest(vector<float>& qv, float r2,kdtree2_result_vector& result);
-  // search for all neighbors in ball of size (square Euclidean distance)
-  // r2.   Return number of neighbors in 'result.size()', 
+    int r_count(vector<float>& qv, float r2);
+    // count number of neighbors within square distance r2.
 
-  void r_nearest_around_point(int idxin, int correltime, float r2,
-            kdtree2_result_vector& result);
-  // like 'r_nearest', but around existing point, with decorrelation
-  // interval. 
+    vector<int>* getIndex(){return &ind; }
 
-  int r_count(vector<float>& qv, float r2);
-  // count number of neighbors within square distance r2.
-  int r_count_around_point(int idxin, int correltime, float r2);
-  // like r_count, c
+    friend class kdtree2_node;
+    friend class searchrecord;
+  private:
+    // private data members
 
-  vector<int>* getIndex(){return &ind; }
+    kdtree2_node* root; // the root pointer
 
-  friend class kdtree2_node;
-  friend class searchrecord;
-private:
-  // private data members
+    const array2dfloat* data;
+    // pointing either to the_data or an internal
+    // rearranged data as necessary
 
-  kdtree2_node* root; // the root pointer
+    vector<int> ind; 
+    // the index for the tree leaves.  Data in a leaf with bounds [l,u] are
+    // in  'the_data[ind[l],*] to the_data[ind[u],*]
 
-  const array2dfloat* data;
-  // pointing either to the_data or an internal
-  // rearranged data as necessary
+    array2dfloat rearranged_data;  
+    // if rearrange is true then this is the rearranged data storage. 
 
-  vector<int> ind; 
-  // the index for the tree leaves.  Data in a leaf with bounds [l,u] are
-  // in  'the_data[ind[l],*] to the_data[ind[u],*]
-
-  array2dfloat rearranged_data;  
-  // if rearrange is true then this is the rearranged data storage. 
-
-  static const int bucketsize = 12;  // global constant. 
-  
-private:
-  void set_data(array2dfloat& din); 
-  void build_tree(); // builds the tree.  Used upon construction. 
-  kdtree2_node* build_tree_for_range(int l, int u, kdtree2_node* parent);
-  void select_on_coordinate(int c, int k, int l, int u); 
-  int select_on_coordinate_value(int c, float alpha, int l, int u); 
-  void spread_in_coordinate(int c, int l, int u, interval& interv);
+    static const int bucketsize = 12;  // global constant. 
+    
+  private:
+    void set_data(array2dfloat& din); 
+    void build_tree(); // builds the tree.  Used upon construction. 
+    kdtree2_node* build_tree_for_range(int l, int u, kdtree2_node* parent);
+    int select_on_coordinate_value(int c, float alpha, int l, int u); 
+    void spread_in_coordinate(int c, int l, int u, interval& interv);
 };
 
 
-//
-// class KDTREE2_NODE
-// 
-// a node in the tree.  Many are created per tree dynamically.. 
-//
+/*
+  class KDTREE2_NODE
+
+  a node in the tree.  Many are created per tree dynamically.. 
+*/
 
 
 class kdtree2_node {
@@ -200,7 +188,5 @@ class kdtree2_node {
     void process_terminal_node(searchrecord& sr);
     void process_terminal_node_fixedball(searchrecord& sr);
 };
-
-
 
 #endif
