@@ -31,11 +31,11 @@ namespace NWUClustering {
   */
   void get_extra_points(ClusteringAlgo& dbs) {
 
-    int k, i, j, rank, nproc, thisNode, thatNode; // `thisNode` & `thatNode` are used to speed up computation by only doing it once
+    int k, i, j, rank, nproc, thisNode, thatNode, dims = dbs.m_pts->m_i_dims; // `thisNode` & `thatNode` are used to speed up computation by only doing it once
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
     // `local_box` size is the number of dimensions of the dataset
-    interval* local_box = new interval[dbs.m_pts->m_i_dims];
+    interval* local_box = new interval[dims];
     compute_local_bounding_box(dbs, local_box);
 
     /* 
@@ -45,20 +45,21 @@ namespace NWUClustering {
     */
     float eps = sqrt(dbs.m_epsSquare);
 
-    for(i = 0; i < dbs.m_pts->m_i_dims; i++) {
+    for(i = 0; i < dims; i++) {
       local_box[i].upper += eps;
       local_box[i].lower -= eps; 
     }
   
     // all together all the extending bounding box
-    interval* gather_local_box = new interval[dbs.m_pts->m_i_dims * nproc];
+    interval* gather_local_box = new interval[dims * nproc];
 
     /*
       gather the local bounding box first
       Gathers data from all processes and distributes it to all processes
       int MPI_Allgather(const void *sendbuf, int  sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm)
     */
-    MPI_Allgather(local_box, sizeof(interval) * dbs.m_pts->m_i_dims, MPI_BYTE, gather_local_box, sizeof(interval) * dbs.m_pts->m_i_dims, MPI_BYTE, MPI_COMM_WORLD);
+    int sendcount = sizeof(interval) * dims; // instead of doing the calculation twice, just do it once...
+    MPI_Allgather(local_box, sendcount, MPI_BYTE, gather_local_box, sendcount, MPI_BYTE, MPI_COMM_WORLD);
 
     bool if_inside, overlap;
     int count = 0, gcount;
@@ -80,7 +81,7 @@ namespace NWUClustering {
       This is to get the "out box" points from other nodes.
       This is still considered a preprocessing step.
     */
-    thisNode = rank * dbs.m_pts->m_i_dims; // only needs to be computed once, but is used often
+    thisNode = rank * dims; // only needs to be computed once, but is used often
     for(k = 0; k < nproc; k++) {
       // makes no sense for a node to compare itself to itself. Move to next itteration.
       if(k == rank) 
@@ -93,8 +94,8 @@ namespace NWUClustering {
         Looping over each dimension, to determine if there is any overlap in the "bounding boxes"
         If there is no overlap, the `overlap` flag is switched to FALSE.
       */
-      thatNode = k * dbs.m_pts->m_i_dims; // Is used several times, so only need to calculate it once
-      for(j = 0; j < dbs.m_pts->m_i_dims; j++) {
+      thatNode = k * dims; // Is used several times, so only need to calculate it once
+      for(j = 0; j < dims; j++) {
         if(gather_local_box[thisNode + j].lower < gather_local_box[thatNode +j].lower) {
           if(gather_local_box[thisNode + j].upper - gather_local_box[thatNode + j].lower < eps) {
             overlap = false;
@@ -115,7 +116,7 @@ namespace NWUClustering {
       // get the overlapping regions
       for(i = 0; i < dbs.m_pts->m_i_num_points; i++) {
         if_inside = true; // just a flag
-        for(j = 0; j < dbs.m_pts->m_i_dims; j++) {
+        for(j = 0; j < dims; j++) {
           // determine of the current point, is within another bounding box or not.
           if(dbs.m_pts->m_points[i][j] < gather_local_box[thatNode + j].lower || dbs.m_pts->m_points[i][j] > gather_local_box[thatNode + j].upper) {
             if_inside = false;
@@ -124,7 +125,7 @@ namespace NWUClustering {
         }
         // if the flag was never tripped, put the points into the send buffer
         if(if_inside == true) {
-          for(j = 0; j < dbs.m_pts->m_i_dims; j++)
+          for(j = 0; j < dims; j++)
             send_buf[k].push_back(dbs.m_pts->m_points[i][j]);
           // TODO no idea what this does
           send_buf_ind[k].push_back(i);
@@ -149,7 +150,7 @@ namespace NWUClustering {
     MPI_Alltoall(&send_buf_size[0], 1, MPI_INT, &recv_buf_size[0], 1, MPI_INT, MPI_COMM_WORLD);
 
     //return;
-    int tag = 200, send_count, recv_count;
+    int tag = 200, tagPlusOne = 201, send_count, recv_count;
     MPI_Request req_send[2 * nproc], req_recv[2 * nproc];
     MPI_Status stat_send[2 * nproc], stat_recv;
 
@@ -158,13 +159,13 @@ namespace NWUClustering {
       // only continue if the current element actually has elements in it
       if(recv_buf_size[i] > 0) {
         recv_buf[i].resize(recv_buf_size[i], 0);
-        recv_buf_ind[i].resize(recv_buf_size[i] / dbs.m_pts->m_i_dims, -1);
+        recv_buf_ind[i].resize(recv_buf_size[i] / dims, -1);
         /*
           Starts a standard-mode, nonblocking receive.
           int MPI_Irecv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request)
         */
         MPI_Irecv(&recv_buf[i][0], recv_buf_size[i], MPI_FLOAT, i, tag, MPI_COMM_WORLD, &req_recv[recv_count++]);
-        MPI_Irecv(&recv_buf_ind[i][0], recv_buf_size[i] / dbs.m_pts->m_i_dims, MPI_INT, i, tag + 1, MPI_COMM_WORLD, &req_recv[recv_count++]);
+        MPI_Irecv(&recv_buf_ind[i][0], recv_buf_size[i] / dims, MPI_INT, i, tagPlusOne, MPI_COMM_WORLD, &req_recv[recv_count++]);
       }
     }
 
@@ -176,14 +177,14 @@ namespace NWUClustering {
           int MPI_Isend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request)
         */
         MPI_Isend(&send_buf[i][0], send_buf_size[i], MPI_FLOAT, i, tag, MPI_COMM_WORLD, &req_send[send_count++]);
-        MPI_Isend(&send_buf_ind[i][0], send_buf_size[i] / dbs.m_pts->m_i_dims, MPI_INT, i, tag + 1, MPI_COMM_WORLD, &req_send[send_count++]);
+        MPI_Isend(&send_buf_ind[i][0], send_buf_size[i] / dims, MPI_INT, i, tagPlusOne, MPI_COMM_WORLD, &req_send[send_count++]);
       }
     }
 
     int rtag, rsource, rpos;
 
     // Sets up the Points_Outer object
-    dbs.allocate_outer(dbs.m_pts->m_i_dims);
+    dbs.allocate_outer(dims);
 
     for(i = 0; i < recv_count; i++) {
       /*
@@ -197,10 +198,10 @@ namespace NWUClustering {
     
       if(rtag == tag) {
         // process the request
-        dbs.addPoints(rsource, recv_buf_size[rsource], dbs.m_pts->m_i_dims, recv_buf[rsource]);
+        dbs.addPoints(rsource, recv_buf_size[rsource], dims, recv_buf[rsource]);
 
         recv_buf[rsource].clear();
-      } else if(rtag == tag + 1) {
+      } else if(rtag == tagPlusOne) {
         // postpond this computation and call update points later
         // processing immediately might lead to invalid computation
       }
@@ -240,20 +241,20 @@ namespace NWUClustering {
     The "partners" for each node are specified when they are set up.
   */
   void start_partitioning(ClusteringAlgo& dbs) {
-    int r_count, s_count, rank, nproc, i, j, k;
+    int r_count, s_count, rank, nproc, i, j, k, dims = dbs.m_pts->m_i_dims;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
     // compute the local bouding box for each dimention
-    interval* box = new interval[dbs.m_pts->m_i_dims];
+    interval* box = new interval[dims];
     
-    for(i = 0; i < dbs.m_pts->m_i_dims; i++) { 
+    for(i = 0; i < dims; i++) { 
       box[i].upper = dbs.m_pts->m_box[i].upper;
       box[i].lower = dbs.m_pts->m_box[i].lower;
     }
 
     // compute the global bouding box for each dimention
-    interval* gbox = new interval[dbs.m_pts->m_i_dims];
+    interval* gbox = new interval[dims];
     compute_global_bounding_box(dbs, box, gbox, nproc);
 
     // find the loop count for nproc processors
@@ -284,7 +285,7 @@ namespace NWUClustering {
     //gbox for each node in the tree [ONLY upto to reaching each processor]
     interval** nodes_gbox = new interval*[internal_nodes];
     for(i = 0; i < internal_nodes; i++)
-      nodes_gbox[i] = new interval[dbs.m_pts->m_i_dims];
+      nodes_gbox[i] = new interval[dims];
     
     copy_global_box_to_each_node(dbs, nodes_gbox, gbox, internal_nodes);
   
@@ -428,7 +429,7 @@ namespace NWUClustering {
 
       if(sub_rank == 0) {
         d = 0;
-        for(j = 1; j < dbs.m_pts->m_i_dims; j++) {
+        for(j = 1; j < dims; j++) {
           // if the delta of J > delta of D, assign d to j
           if((nodes_gbox[powColor][j].upper - nodes_gbox[powColor][j].lower) > (nodes_gbox[powColor][d].upper - nodes_gbox[powColor][d].lower))
             d = j;
@@ -446,7 +447,7 @@ namespace NWUClustering {
       s_count = get_points_to_send(dbs, send_buf, invalid_pos_as, median, d, rank, partner_rank);
 
       int recvcount;
-      int sendcount = s_count * dbs.m_pts->m_i_dims;
+      int sendcount = s_count * dims;
 
       if (rank < partner_rank) {
         /*
@@ -456,13 +457,13 @@ namespace NWUClustering {
                            int source, int recvtag, MPI_Comm comm, MPI_Status *status)
         */
         MPI_Sendrecv(&s_count, 1, MPI_INT, partner_rank, 4, &r_count, 1, MPI_INT, partner_rank, 5, MPI_COMM_WORLD, &status);
-        recvcount = r_count * dbs.m_pts->m_i_dims;
+        recvcount = r_count * dims;
         recv_buf.resize(recvcount, 0.0);
         MPI_Sendrecv(&send_buf[0], sendcount, MPI_FLOAT, partner_rank, 2, &recv_buf[0], recvcount, MPI_FLOAT, partner_rank, 3, MPI_COMM_WORLD, &status);
         send_buf.clear();
       } else {
         MPI_Sendrecv(&s_count, 1, MPI_INT, partner_rank, 5, &r_count, 1, MPI_INT, partner_rank, 4, MPI_COMM_WORLD, &status);
-        recvcount = r_count * dbs.m_pts->m_i_dims;
+        recvcount = r_count * dims;
         recv_buf.resize(recvcount, 0.0);
         MPI_Sendrecv(&send_buf[0], sendcount, MPI_FLOAT, partner_rank, 3, &recv_buf[0], recvcount, MPI_FLOAT, partner_rank, 2, MPI_COMM_WORLD, &status);
         send_buf.clear();
