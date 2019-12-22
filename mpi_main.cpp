@@ -146,16 +146,14 @@ int main(int argc, char** argv) {
   dbs.build_kdtree();
   dbs.build_kdtree_outer();
   MPI_Barrier(MPI_COMM_WORLD);
-  if(rank == proc_of_interest) cout << "Build kdtree took " << MPI_Wtime() - start << " seconds [pre_processing]" << endl;
-  if(rank == proc_of_interest) cout << endl;  
+  if(rank == proc_of_interest) cout << "Build kdtree took " << MPI_Wtime() - start << " seconds [pre_processing]\n" << endl;
   
   //run the DBSCAN algorithm
   start = MPI_Wtime();
   run_dbscan_algo_uf_mpi_interleaved(dbs);
   MPI_Barrier(MPI_COMM_WORLD);
-  if(rank == proc_of_interest) cout << "Parallel DBSCAN (init, local computation, and merging) took " << MPI_Wtime() - start << " seconds "<< endl;
-  if(rank == proc_of_interest) cout << endl;
-  
+  if(rank == proc_of_interest) cout << "Parallel DBSCAN (init, local computation, and merging) took " << MPI_Wtime() - start << " seconds\n"<< endl;
+
   // assign cluster IDs to points
   start = MPI_Wtime();
   dbs.get_clusters_distributed(); 
