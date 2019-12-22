@@ -47,8 +47,6 @@ namespace NWUClustering {
   // Adds points to a cluster object
     // Called in geometric_partitioning.cpp
   bool Clusters::addPoints(int source, int buf_size, int dims, vector<float>& raw_data) {
-    int rank;// TODO not even used
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);// TODO not even used
 
     // used as itterables
     int i, j, k; 
@@ -65,13 +63,13 @@ namespace NWUClustering {
     // Save the original number of points, then increase by the new "num_points" value
     pos = m_pts_outer->m_i_num_points;
     m_pts_outer->m_i_num_points += num_points;
-    //m_pts_outer->m_points.resize(extents[m_pts_outer->m_i_num_points][dims]);
     
     //allocate memory for the points
       // resize() - Resizes the container so that it contains n elements
     m_pts_outer->m_points.resize(m_pts_outer->m_i_num_points);
     // resize each new point object
-    for(int ll = 0; ll < m_pts_outer->m_i_num_points; ll++) 
+    int temp = m_pts_outer->m_i_num_points;
+    for(int ll = 0; ll < temp; ll++) 
       m_pts_outer->m_points[ll].resize(dims);
     // resize the point IDs
     m_pts_outer->m_prIDs.resize(m_pts_outer->m_i_num_points, -1);
@@ -85,8 +83,8 @@ namespace NWUClustering {
         m_pts_outer->m_points[pos][j] = raw_data[k++]; // TODO possible buffer overflow????????
         
       }
-      // assign the cluster ID for the point
-      m_pts_outer->m_prIDs[pos] = source; // TODO check that source is a cluster ID
+      // assign the Node ID for the point
+      m_pts_outer->m_prIDs[pos] = source; // `source` is the Node that the point is on
       // increment the counter for the key...
       pos++;
     }
@@ -97,8 +95,6 @@ namespace NWUClustering {
   // Updates OUTER points' cluster IDs
     // Called in geometric_partitioning.cpp
   bool Clusters::updatePoints(vector< vector<int> >& raw_ind) {
-    int rank;// TODO not even used
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);// TODO not even used
     
     // used as itterables
     int i, j = -1;
@@ -107,7 +103,8 @@ namespace NWUClustering {
     // resize 'm_ind', by 'm_i_num_points' spaces, new elements are initialized as copies of -1
     m_pts_outer->m_ind.resize(m_pts_outer->m_i_num_points, -1);
     // loop over the Outer points, and update cluster IDs
-    for(i = 0; i < m_pts_outer->m_i_num_points; i++) {
+    int temp = m_pts_outer->m_i_num_points;
+    for(i = 0; i < temp; i++) {
       source = m_pts_outer->m_prIDs[i];
       
       if(source != prev_source)
@@ -129,7 +126,7 @@ namespace NWUClustering {
     According to the README, 'num_points' & 'dims' HAVE to be the 1st 2 things in the file (each 4 bytes).
   */
   int Clusters::read_file(char* infilename, int isBinaryFile) {
-    ssize_t numBytesRead; // TODO this isn't even used
+    
     // used as itterables
     int i, j;
     // rank = current node's ID, nproc = total number of nodes in the system
@@ -177,14 +174,11 @@ namespace NWUClustering {
         // interval struct defined in kdtree2.hpp
           // m_box, is of type interval*
         m_pts->m_box = new interval[m_pts->m_i_dims]; 
-
-        //allocate memory for the points
-        //m_pts->m_points.resize(extents[num_points][dims]);
-        //m_pts->m_points.resize(extents[m_pts->m_i_num_points][dims]);
         
         //allocate memory for the points
         m_pts->m_points.resize(m_pts->m_i_num_points);
-        for(int ll = 0; ll < m_pts->m_i_num_points; ll++)
+        int temp = m_pts->m_i_num_points;
+        for(int ll = 0; ll < temp; ll++)
           m_pts->m_points[ll].resize(dims);
 
         // point_coord_type = typedef float point_coord_type; in 'utils.h'
@@ -195,8 +189,8 @@ namespace NWUClustering {
         // fseek to the respective position of the file
         file.seekg(lower * dims * sizeof(point_coord_type), ios::cur);
         // loop over the area of the file for the node
-          // TODO possible speed up: put 'upper - lower' into a local variable...
-        for (i = 0; i < upper - lower; i++) {
+        int delta = upper - lower;
+        for (i = 0; i < delta; i++) {
           // signature: istream& read (char* s, streamsize n);
           // Extracts n characters from the stream and stores them in the array pointed to by s.
           file.read((char*)pt, dims * sizeof(point_coord_type));
@@ -231,10 +225,12 @@ namespace NWUClustering {
     return 0;
   }
   
-  // Called from mpi_main...
+  /*
+   Called from mpi_main...
+   Builds the kd-tree containing the "main" points for the node.
+  */
   int Clusters::build_kdtree() {
-    int rank;// TODO not even used
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);// TODO not even used
+
     // if the Point objects weren't created, don't bother going further...
     if(m_pts == NULL) {
       cout << "Point set is empty" << endl;
@@ -251,10 +247,11 @@ namespace NWUClustering {
 
     return 0;   
   } 
-  // Called from mpi_main...
+  /*
+   Called from mpi_main...
+   Builds the kd-tree containing the outer points for the node.
+  */
   int Clusters::build_kdtree_outer() {
-    int rank;// TODO not even used
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);// TODO not even used
     
     if(m_pts_outer == NULL) {
       cout << "Outer point set is empty" << endl;

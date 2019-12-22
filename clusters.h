@@ -39,14 +39,13 @@ namespace NWUClustering {
       int build_kdtree_outer(); 
     
     public:
-      Points*   m_pts;
-      kdtree2*  m_kdtree;
-
-      Points_Outer* m_pts_outer;
-      kdtree2*      m_kdtree_outer;
+      Points*   m_pts; // "Main" points of the node
+      kdtree2*  m_kdtree; // "main" kd-tree for the "main" points of the node
+      // These structs/"objects" contain point data from other nodes 
+      Points_Outer* m_pts_outer; // "outer" points of the node
+      kdtree2*      m_kdtree_outer; // "outer" kd-tree for the "outer" points of the node
 
       vector <int>  m_pid_to_cid; // point id to cluster id
-      vector <vector <int> > m_clusters; // TODO not even used
   };
 };
 

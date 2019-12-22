@@ -43,17 +43,13 @@ static void usage(char *argv0) {
 
 // TODO splicing compression technique, using "Rem's union-find technique": https://algocoding.wordpress.com/2015/05/13/simple-union-find-techniques/#more-1395
 int main(int argc, char** argv) {
-  double  seconds;
   int   opt;
-
-  int   minPts, procs;
-  double  eps;
+  int   minPts;
+  double  eps, start;
   char*   outfilename;
   int     isBinaryFile;
   char*   infilename;
-
   int rank, nproc;
-  MPI_Status status;
 
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -65,7 +61,7 @@ int main(int argc, char** argv) {
   isBinaryFile = 1; // default binary file
   outfilename = NULL;
   infilename = NULL;
-  // determine command line options
+  // determine command line options // TODO need to modify this for SNG Alg
   while ((opt=getopt(argc,argv,"i:m:e:o:?b"))!= EOF) {
     switch (opt) {
       case 'i':
@@ -101,7 +97,7 @@ int main(int argc, char** argv) {
   // 'proc_of_interest' defined in utils.h as process 0, the master node
   if(rank == proc_of_interest) cout << "Number of process cores " << nproc << endl;
 
-  // check if nproc is NOT multiple of TWO
+  // check if `nproc` is NOT multiple of TWO
   unsigned int proc_count = nproc;
   // filter command line input, again
   while (((proc_count % 2) == 0) && proc_count > 1) // While x is even and > 1
@@ -115,12 +111,12 @@ int main(int argc, char** argv) {
   // declaring the ClusteringAlgo object 'dbs'
   NWUClustering::ClusteringAlgo dbs;
   // initialize some paramaters
-  dbs.set_dbscan_params(eps, minPts);
+  dbs.set_dbscan_params(eps, minPts); // TODO need to modify this for SNG Alg
 
   if(rank == proc_of_interest) cout << "Epsilon: " << eps << " MinPts: " << minPts << endl;
   // Make ALL of the nodes/processes wait till they ALL get to this point
   MPI_Barrier(MPI_COMM_WORLD);
-  double start = MPI_Wtime();
+  start = MPI_Wtime();
 
   if(rank == proc_of_interest) cout << "Reading points from file: " << infilename << endl;
   // determine if there was an error reading from the binary file
@@ -150,16 +146,14 @@ int main(int argc, char** argv) {
   dbs.build_kdtree();
   dbs.build_kdtree_outer();
   MPI_Barrier(MPI_COMM_WORLD);
-  if(rank == proc_of_interest) cout << "Build kdtree took " << MPI_Wtime() - start << " seconds [pre_processing]" << endl;
+  if(rank == proc_of_interest) cout << "Build kdtree took " << MPI_Wtime() - start << " seconds [pre_processing]\n" << endl;
   
-  if(rank == proc_of_interest) cout << endl;  
   //run the DBSCAN algorithm
   start = MPI_Wtime();
   run_dbscan_algo_uf_mpi_interleaved(dbs);
   MPI_Barrier(MPI_COMM_WORLD);
-  if(rank == proc_of_interest) cout << "Parallel DBSCAN (init, local computation, and merging) took " << MPI_Wtime() - start << " seconds "<< endl;
-  if(rank == proc_of_interest) cout << endl;
-  
+  if(rank == proc_of_interest) cout << "Parallel DBSCAN (init, local computation, and merging) took " << MPI_Wtime() - start << " seconds\n"<< endl;
+
   // assign cluster IDs to points
   start = MPI_Wtime();
   dbs.get_clusters_distributed(); 
@@ -168,7 +162,7 @@ int main(int argc, char** argv) {
   if(outfilename != NULL) {
     start = MPI_Wtime();  
 
-    // activate the followingline to write the cluster to file
+    // activate the following line to write the cluster to file
     dbs.writeCluster_distributed(outfilename);
     if(rank == proc_of_interest) cout << "Writing clusterIDs to disk took " << MPI_Wtime() - start << " seconds [pre_processing]"<< endl;
   }
