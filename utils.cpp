@@ -30,6 +30,7 @@ float findKMedian(vector<float>& A, int K) {
   l=0;
   m=A.size()-1;
   while (l < m) {
+    // NOTE: These variables need to stay here, because of the swap() lower down
     float x=A[K];
     int i=l;
     int j=m;
