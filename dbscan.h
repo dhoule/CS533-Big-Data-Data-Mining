@@ -35,7 +35,7 @@ namespace NWUClustering {
     ClusteringAlgo(){ }
     virtual ~ClusteringAlgo();
 
-    void set_dbscan_params(double eps, int minPts);
+    void set_dbscan_params(double eps, int minPts, double seed_percentage);
     void  get_clusters_distributed();
     void  writeCluster_distributed(string outfilename);
 
@@ -47,6 +47,7 @@ namespace NWUClustering {
     double  m_epsSquare; // AKA radius. It is the square of the "radius" given by the user
     int   m_minPts; // The minimum number of points, given by the user, to start a cluster
     int   m_compression;
+    double m_perc_of_dataset; // The percentage of the points each node is to use, given by the user. Default value is 1.0(all points)
 
     vector <int> m_parents; // Elements hold the pointers of the clustering tree
     vector <int> m_parents_pr; // Elements hold the pointers for which node the point is in
