@@ -30,12 +30,13 @@
 
 static void usage(char *argv0) {
   const char *params =
-    "Usage: %s [switches] -i filename -b -m minpts -e epsilon -o output\n"
+    "Usage: %s [switches] -i filename -b -m minpts -e epsilon -o output [-k seed_percentage]\n"
     " -i filename : file containing input data to be clustered\n"
     " -b    : input file is in binary format (default, binary and currently the only supported format)\n"
     " -m minpts : input parameter of DBSCAN, min points to form a cluster, e.g. 2\n"
     " -e epsilon  : input parameter of DBSCAN, radius or threshold on neighbourhoods retrieved, e.g. 0.8\n"
-    " -o output : clustering results, format, (points coordinates, cluster id)\n\n";
+    " -o output : clustering results, format, (points coordinates, cluster id)\n"
+    " -k seed_percentage : the percentage of points for each node to use; range is [0.0,1.0), with default value of 1.0\n\n";
   
   fprintf(stderr, params, argv0);
   exit(-1);
@@ -45,7 +46,7 @@ static void usage(char *argv0) {
 int main(int argc, char** argv) {
   int   opt;
   int   minPts;
-  double  eps, start;
+  double  eps, start, seed_percentage;
   char*   outfilename;
   int     isBinaryFile;
   char*   infilename;
@@ -58,11 +59,13 @@ int main(int argc, char** argv) {
   // some default values
   minPts = -1;
   eps = -1;
+  seed_percentage = 1.0;
   isBinaryFile = 1; // default binary file
   outfilename = NULL;
   infilename = NULL;
+
   // determine command line options // TODO need to modify this for SNG Alg
-  while ((opt=getopt(argc,argv,"i:m:e:o:?b"))!= EOF) {
+  while ((opt=getopt(argc,argv,"i:m:e:o:k:?b"))!= EOF) {
     switch (opt) {
       case 'i':
         infilename = optarg;
@@ -78,6 +81,9 @@ int main(int argc, char** argv) {
         break;
       case 'o':
         outfilename = optarg;
+        break;
+      case 'k':
+        seed_percentage = atof(optarg);
         break;
       case '?':
         usage(argv[0]);
@@ -105,6 +111,12 @@ int main(int argc, char** argv) {
   
   if(proc_count != 1) {
     if(rank == proc_of_interest) cout << "\n\nPlease use the number of process cores as a multiple of TWO" << endl;
+    MPI_Finalize();
+    return 0;
+  }
+
+  if((0.0 >= seed_percentage) || (1.0 < seed_percentage)) {
+    if(rank == proc_of_interest) cout << "\n\nFor -k, please use a percentage greater than 0.0 and less than or equal to 1.0." << endl;
     MPI_Finalize();
     return 0;
   }
