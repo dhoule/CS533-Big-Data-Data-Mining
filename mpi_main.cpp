@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
   outfilename = NULL;
   infilename = NULL;
 
-  // determine command line options // TODO need to modify this for SNG Alg
+  // determine command line options 
   while ((opt=getopt(argc,argv,"i:m:e:o:k:?b"))!= EOF) {
     switch (opt) {
       case 'i':
@@ -115,6 +115,7 @@ int main(int argc, char** argv) {
     return 0;
   }
 
+  // make sure `seed_percentage` is within the specified range
   if((0.0 >= seed_percentage) || (1.0 < seed_percentage)) {
     if(rank == proc_of_interest) cout << "\n\nFor -k, please use a percentage greater than 0.0 and less than or equal to 1.0." << endl;
     MPI_Finalize();
@@ -123,7 +124,7 @@ int main(int argc, char** argv) {
   // declaring the ClusteringAlgo object 'dbs'
   NWUClustering::ClusteringAlgo dbs;
   // initialize some paramaters
-  dbs.set_dbscan_params(eps, minPts); // TODO need to modify this for SNG Alg
+  dbs.set_dbscan_params(eps, minPts, seed_percentage); // TODO need to modify this for SNG Alg
 
   if(rank == proc_of_interest) cout << "Epsilon: " << eps << " MinPts: " << minPts << endl;
   // Make ALL of the nodes/processes wait till they ALL get to this point
