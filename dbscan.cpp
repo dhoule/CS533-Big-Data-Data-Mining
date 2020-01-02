@@ -29,11 +29,13 @@ namespace NWUClustering {
   /*
     eps = epsilon/radious
     minPts = minimum number of points need to make a cluster
+    seed_percentage = percentage of points each node is to use
   */
-  void ClusteringAlgo::set_dbscan_params(double eps, int minPts) {
+  void ClusteringAlgo::set_dbscan_params(double eps, int minPts, double seed_percentage) {
     m_epsSquare =  eps * eps;
     m_minPts =  minPts;
     m_compression = 0; // can set to 1 if want to compress specailly in the first round of communication
+    m_perc_of_dataset = seed_percentage;
   }
 
   // Destructor
