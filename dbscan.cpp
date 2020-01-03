@@ -84,17 +84,18 @@ namespace NWUClustering {
     // get the starting time before doing anything in this function
     double start = MPI_Wtime();
     double org = 0;
-    int pairs, pid, npid, i, j, pid_count, npid_count;
+    int pairs, pid, npid, i, j, pid_count, npid_count, data_size = (*data).size(), temp;
 
     // The number of "pairs" in the "data" vector
-    pairs = (*data).size()/2; 
+    pairs = data_size/2; 
     // TODO don't know what "org" is supposed to stand for, 'original' maybe
-    org = (*data).size();   
+    org = data_size;   
     
     // loop over 'data' and add elements to the back of a vector 'parser'[pid]
     for(i = 0; i < pairs; i++) {
-      pid = (*data)[2 * i];
-      npid = (*data)[2 * i + 1];
+      temp = 2 * i;
+      pid = (*data)[temp];
+      npid = (*data)[temp + 1];
       (*parser)[pid].push_back(npid);
     }
     // empty the 'data' vector, and set the size to 0
@@ -104,7 +105,7 @@ namespace NWUClustering {
     (*data).push_back(pid_count); // uniques pids, should update later
     // 'm_pts' is the current cluster's struct object. Initialized in clusters.cpp read_file().
     // Loop rebuilds the 'data' vector and clears out dimensions of the 'parser' vector
-    int temp = m_pts->m_i_num_points;
+    temp = m_pts->m_i_num_points;
     for(i = 0; i < temp; i++) {
       npid_count = (*parser)[i].size();
       if(npid_count > 0) {
@@ -123,7 +124,7 @@ namespace NWUClustering {
     // The function merges Points from other nodes
   void ClusteringAlgo::get_clusters_distributed() {
     // Determine the current node's rank within the cluster, and the size of the cluster itself
-    int rank, nproc, i;
+    int rank, nproc, i, numPts, pid; // pid == process ID???
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
     
@@ -143,10 +144,9 @@ namespace NWUClustering {
     merge_send2.resize(nproc, init); 
     init.clear(); // clear the unused variable ASAP
 
-    int pid; // process ID???
     // loop over the other dimensions of the vectors, 
       // resizing them to the minimum length of the number of points that 'm_pts' has.
-    int numPts = m_pts->m_i_num_points;
+    numPts = m_pts->m_i_num_points;
     for(pid = 0; pid < nproc; pid++) {
       merge_received[pid].reserve(numPts);
       merge_send1[pid].reserve(numPts);
@@ -612,7 +612,7 @@ namespace NWUClustering {
     int *data_id = new int[count[0] * count[1]];    
 
     //write the cluster_ids
-    for(i = 0; i < m_pts->m_i_num_points; i++)
+    for(i = 0; i < temp2; i++)
       data_id[i] = m_pid_to_cid[i];
 
     ret = ncmpi_put_vara_int_all(ncfile, varid[m_pts->m_i_dims], start, count, data_id);
