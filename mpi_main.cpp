@@ -46,7 +46,7 @@ static void usage(char *argv0) {
 int main(int argc, char** argv) {
   int   opt;
   int   minPts;
-  double  eps, start, seed_percentage;
+  double  eps, start, seed_percentage, preprocessing_start, actual_start;
   char*   outfilename;
   int     isBinaryFile;
   char*   infilename;
@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
   // Make ALL of the nodes/processes wait till they ALL get to this point
   MPI_Barrier(MPI_COMM_WORLD);
   start = MPI_Wtime();
-
+  
   if(rank == proc_of_interest) cout << "Reading points from file: " << infilename << endl;
   // determine if there was an error reading from the binary file
   if(dbs.read_file(infilename, isBinaryFile) == -1) {
@@ -142,27 +142,28 @@ int main(int argc, char** argv) {
   // Make ALL of the nodes/processes wait till they ALL get to this point
   MPI_Barrier(MPI_COMM_WORLD);
   start = MPI_Wtime();
-  
-  // parttition the data file geometrically: preprocessing step
+  preprocessing_start = start; // used to calculate total preprocessing time
+  // parttition the data file geometrically: preprocessing_start, actual_start step
   start_partitioning(dbs);
   MPI_Barrier(MPI_COMM_WORLD);
   if(rank == proc_of_interest) cout << "Partitioning the data geometrically took " << MPI_Wtime() - start << " seconds [pre_processing]" << endl;
   
-  // gather extra(outer) points that falls within the eps radius from the boundary: preprocessing step
+  // gather extra(outer) points that falls within the eps radius from the boundary: preprocessing_start, actual_start step
   start = MPI_Wtime();
   get_extra_points(dbs);
   MPI_Barrier(MPI_COMM_WORLD);
   if(rank == proc_of_interest) cout << "Gathering extra point took " << MPI_Wtime() - start << " seconds [pre_processing]" << endl;
     
-  // build the kdtrees: preprocessing step 
+  // build the kdtrees: preprocessing_start, actual_start step 
   start = MPI_Wtime();
   dbs.build_kdtree();
   dbs.build_kdtree_outer();
   MPI_Barrier(MPI_COMM_WORLD);
   if(rank == proc_of_interest) cout << "Build kdtree took " << MPI_Wtime() - start << " seconds [pre_processing]\n" << endl;
-  
+  if(rank == proc_of_interest) cout << "\nTotal preprocessing time: " << MPI_Wtime() - preprocessing_start << " seconds\n" << endl;
   //run the DBSCAN algorithm
   start = MPI_Wtime();
+  actual_start = start;
   run_dbscan_algo_uf_mpi_interleaved(dbs);
   MPI_Barrier(MPI_COMM_WORLD);
   if(rank == proc_of_interest) cout << "Parallel DBSCAN (init, local computation, and merging) took " << MPI_Wtime() - start << " seconds\n"<< endl;
@@ -171,7 +172,10 @@ int main(int argc, char** argv) {
   start = MPI_Wtime();
   dbs.get_clusters_distributed(); 
   if(rank == proc_of_interest) cout << "Assigning cluster IDs to points " << MPI_Wtime() - start << " seconds [post_processing]" << endl;
-  
+  if(rank == proc_of_interest) cout << "\nTotal time for actual algorithm (including assigning cluster IDs): " << MPI_Wtime() - actual_start << " seconds\n" << endl;
+  if(rank == proc_of_interest) cout << "\nTotal time for evrything: " << MPI_Wtime() - preprocessing_start << " seconds\n" << endl;
+
+
   if(outfilename != NULL) {
     start = MPI_Wtime();  
 
