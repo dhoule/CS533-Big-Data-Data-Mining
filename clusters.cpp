@@ -182,9 +182,10 @@ namespace NWUClustering {
           m_pts->m_points[ll].resize(dims);
 
         // point_coord_type = typedef float point_coord_type; in 'utils.h'
-        point_coord_type* pt;         
+        // point_coord_type* pt;         
         // initializes 'pt' variable
-        pt = (point_coord_type*) malloc(dims * sizeof(point_coord_type));
+        // pt = (point_coord_type*) malloc(dims * sizeof(point_coord_type));
+        point_coord_type* pt = new point_coord_type[dims * sizeof(point_coord_type)];
 
         // fseek to the respective position of the file
         file.seekg(lower * dims * sizeof(point_coord_type), ios::cur);
