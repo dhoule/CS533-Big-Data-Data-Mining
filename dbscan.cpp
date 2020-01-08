@@ -717,7 +717,7 @@ namespace NWUClustering {
     
     // the main part of the DBSCAN algorithm (called local computation)
     start = MPI_Wtime();
-    for(i = 0; i < temp; i++) {
+    for(i = 0; i < temp; i++) { // TODO this is the looping over all of the points
       pid = (*ind)[i];
       // getting the local neighborhoods of local point
       ne.clear();
@@ -735,18 +735,19 @@ namespace NWUClustering {
         dbs.m_kdtree_outer->r_nearest(qv, dbs.m_epsSquare, ne_outer);
     
       qv.clear();
-      
-      if(ne.size() + ne_outer.size() >= dbs.m_minPts) {
+      int ne_outer_size = ne_outer.size();
+      if(ne.size() + ne_outer_size >= dbs.m_minPts) {
         // pid is a core point
         root = pid;
         dbs.m_corepoint[pid] = 1;
         dbs.m_member[pid] = 1;
         
-        // traverse the rmote neighbors and add in the communication buffers  
-        for(j = 0; j < ne_outer.size(); j++) {
+        // traverse the remote neighbors and add in the communication buffers  
+        for(j = 0; j < ne_outer_size; j++) {
           npid = ne_outer[j].idx;
-          (*p_cur_insert)[dbs.m_pts_outer->m_prIDs[npid]].push_back(pid);
-          (*p_cur_insert)[dbs.m_pts_outer->m_prIDs[npid]].push_back(dbs.m_pts_outer->m_ind[npid]);
+          int outer_parentIds = dbs.m_pts_outer->m_prIDs[npid];
+          (*p_cur_insert)[outer_parentIds].push_back(pid);
+          (*p_cur_insert)[outer_parentIds].push_back(dbs.m_pts_outer->m_ind[npid]);
         }
         
         //traverse the local neighbors and perform union operation
@@ -815,7 +816,8 @@ namespace NWUClustering {
       triples = (*p_cur_insert)[tid].size()/2;
       local_count += triples;
       for(pid = 0; pid < triples; pid++) {
-        v1 = (*p_cur_insert)[tid][2 * pid];
+        int twoPid = 2 * pid;
+        v1 = (*p_cur_insert)[tid][twoPid];
         root1 = v1;
         while(dbs.m_parents[root1] != root1) {
           root1 = dbs.m_parents[root1];
@@ -827,7 +829,7 @@ namespace NWUClustering {
           v1 = tmp;
         }
 
-        (*p_cur_insert)[tid][2 * pid] = root1;
+        (*p_cur_insert)[tid][twoPid] = root1;
       }
     }
 
