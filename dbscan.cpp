@@ -631,6 +631,14 @@ namespace NWUClustering {
     }
   }
 
+  /*
+    Determines the points that are to be used bassed off of the `k` command line
+    option, if given.
+  */
+  void ClusteringAlgo::getSeeds() {
+    cout << "\n\nm_perc_of_dataset: " << m_perc_of_dataset << endl;
+  }
+
   // "uf" == "Union Find"
   // called in mpi_main.cpp
     // Function gets the union of 2 tress, to create a larger cluster
