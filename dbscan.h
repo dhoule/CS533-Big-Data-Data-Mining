@@ -42,6 +42,8 @@ namespace NWUClustering {
     void  trivial_compression(vector <int>* data, vector < vector <int> >* parser);
     void  trivial_decompression(vector <int>* data);
 
+    void getSeeds();
+
   public:
     
     double  m_epsSquare; // AKA radius. It is the square of the "radius" given by the user
