@@ -29,11 +29,13 @@ namespace NWUClustering {
   /*
     eps = epsilon/radious
     minPts = minimum number of points need to make a cluster
+    seed_percentage = percentage of points each node is to use
   */
-  void ClusteringAlgo::set_dbscan_params(double eps, int minPts) {
+  void ClusteringAlgo::set_dbscan_params(double eps, int minPts, double seed_percentage) {
     m_epsSquare =  eps * eps;
     m_minPts =  minPts;
     m_compression = 0; // can set to 1 if want to compress specailly in the first round of communication
+    m_perc_of_dataset = seed_percentage;
   }
 
   // Destructor
@@ -82,17 +84,18 @@ namespace NWUClustering {
     // get the starting time before doing anything in this function
     double start = MPI_Wtime();
     double org = 0;
-    int pairs, pid, npid, i, j, pid_count, npid_count;
+    int pairs, pid, npid, i, j, pid_count, npid_count, data_size = (*data).size(), temp;
 
     // The number of "pairs" in the "data" vector
-    pairs = (*data).size()/2; 
+    pairs = data_size/2; 
     // TODO don't know what "org" is supposed to stand for, 'original' maybe
-    org = (*data).size();   
+    org = data_size;   
     
     // loop over 'data' and add elements to the back of a vector 'parser'[pid]
     for(i = 0; i < pairs; i++) {
-      pid = (*data)[2 * i];
-      npid = (*data)[2 * i + 1];
+      temp = 2 * i;
+      pid = (*data)[temp];
+      npid = (*data)[temp + 1];
       (*parser)[pid].push_back(npid);
     }
     // empty the 'data' vector, and set the size to 0
@@ -102,7 +105,7 @@ namespace NWUClustering {
     (*data).push_back(pid_count); // uniques pids, should update later
     // 'm_pts' is the current cluster's struct object. Initialized in clusters.cpp read_file().
     // Loop rebuilds the 'data' vector and clears out dimensions of the 'parser' vector
-    int temp = m_pts->m_i_num_points;
+    temp = m_pts->m_i_num_points;
     for(i = 0; i < temp; i++) {
       npid_count = (*parser)[i].size();
       if(npid_count > 0) {
@@ -121,7 +124,7 @@ namespace NWUClustering {
     // The function merges Points from other nodes
   void ClusteringAlgo::get_clusters_distributed() {
     // Determine the current node's rank within the cluster, and the size of the cluster itself
-    int rank, nproc, i;
+    int rank, nproc, i, numPts, pid; // pid == process ID???
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
     
@@ -141,10 +144,9 @@ namespace NWUClustering {
     merge_send2.resize(nproc, init); 
     init.clear(); // clear the unused variable ASAP
 
-    int pid; // process ID???
     // loop over the other dimensions of the vectors, 
       // resizing them to the minimum length of the number of points that 'm_pts' has.
-    int numPts = m_pts->m_i_num_points;
+    numPts = m_pts->m_i_num_points;
     for(pid = 0; pid < nproc; pid++) {
       merge_received[pid].reserve(numPts);
       merge_send1[pid].reserve(numPts);
@@ -610,7 +612,7 @@ namespace NWUClustering {
     int *data_id = new int[count[0] * count[1]];    
 
     //write the cluster_ids
-    for(i = 0; i < m_pts->m_i_num_points; i++)
+    for(i = 0; i < temp2; i++)
       data_id[i] = m_pid_to_cid[i];
 
     ret = ncmpi_put_vara_int_all(ncfile, varid[m_pts->m_i_dims], start, count, data_id);
@@ -634,8 +636,8 @@ namespace NWUClustering {
     // Function gets the union of 2 tress, to create a larger cluster
   void run_dbscan_algo_uf_mpi_interleaved(ClusteringAlgo& dbs) {
     double start = MPI_Wtime();     
-    int i, pid, j, k, npid, prID;
-    int rank, nproc, mpi_namelen;
+    int i, pid, j, k, npid;
+    int rank, nproc;
     kdtree2_result_vector ne;
     kdtree2_result_vector ne_outer;
     
@@ -643,10 +645,10 @@ namespace NWUClustering {
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
     // initialize some parameters
-    int temp = dbs.m_pts->m_i_num_points;
+    int numPts = dbs.m_pts->m_i_num_points; 
     // assign parent to itestf
-    dbs.m_parents.resize(temp, -1);
-    dbs.m_parents_pr.resize(temp, -1);
+    dbs.m_parents.resize(numPts, -1);
+    dbs.m_parents_pr.resize(numPts, -1);
 
     int total_points = 0, points_per_pr[nproc], start_pos[nproc];
 
@@ -668,16 +670,16 @@ namespace NWUClustering {
         vec_prID[k++] = i;
     }
     
-    // restting the membership and corepoints values
-    dbs.m_member.resize(temp, 0);
-    dbs.m_corepoint.resize(temp, 0);
-
+    // resetting the membership and corepoints values
+    dbs.m_member.resize(numPts, 0);
+    dbs.m_corepoint.resize(numPts, 0);
+    // returns the starting address of the `the_data`
     vector<int>* ind = dbs.m_kdtree->getIndex();
     vector<int>* ind_outer = dbs.m_kdtree_outer->getIndex();
 
-    // setting paretns to itself and corresponding proc IDs
-    for(i = 0; i < temp; i++) {
-      pid = (*ind)[i];
+    // setting parents to itself and corresponding proc IDs
+    for(i = 0; i < numPts; i++) { // TODO this is the looping over all of the points
+      pid = (*ind)[i]; // TODO need to change how the Point ID is retrieved
       dbs.m_parents[pid] = pid;
       dbs.m_parents_pr[pid] = rank;
     }
@@ -693,7 +695,7 @@ namespace NWUClustering {
     merge_send2.resize(nproc, init);
     
     // reserving communication buffer memory
-    int tempPlusNodes = temp * nproc;
+    int tempPlusNodes = numPts * nproc;
     for(pid = 0; pid < nproc; pid++) {
       merge_received[pid].reserve(tempPlusNodes);
       merge_send1[pid].reserve(tempPlusNodes);
@@ -715,15 +717,15 @@ namespace NWUClustering {
     
     // the main part of the DBSCAN algorithm (called local computation)
     start = MPI_Wtime();
-    for(i = 0; i < temp; i++) {
-      pid = (*ind)[i];
+    for(i = 0; i < numPts; i++) { // TODO this is the looping over all of the points
+      pid = (*ind)[i]; // TODO need to change how the Point ID is retrieved
       // getting the local neighborhoods of local point
       ne.clear();
       dbs.m_kdtree->r_nearest_around_point(pid, 0, dbs.m_epsSquare, ne);
       
       ne_outer.clear();
       vector<float> qv(dbs.m_pts->m_i_dims);
-
+      // `qv` stands for Query Vector. It is a vector of the current point's dimensions.
       for (int u = 0; u < dbs.m_pts->m_i_dims; u++) {
         qv[u] = dbs.m_kdtree->the_data[pid][u];
       }
@@ -733,18 +735,19 @@ namespace NWUClustering {
         dbs.m_kdtree_outer->r_nearest(qv, dbs.m_epsSquare, ne_outer);
     
       qv.clear();
-      
-      if(ne.size() + ne_outer.size() >= dbs.m_minPts) {
+      int ne_outer_size = ne_outer.size();
+      if(ne.size() + ne_outer_size >= dbs.m_minPts) {
         // pid is a core point
         root = pid;
         dbs.m_corepoint[pid] = 1;
         dbs.m_member[pid] = 1;
         
-        // traverse the rmote neighbors and add in the communication buffers  
-        for(j = 0; j < ne_outer.size(); j++) {
+        // traverse the remote neighbors and add in the communication buffers  
+        for(j = 0; j < ne_outer_size; j++) {
           npid = ne_outer[j].idx;
-          (*p_cur_insert)[dbs.m_pts_outer->m_prIDs[npid]].push_back(pid);
-          (*p_cur_insert)[dbs.m_pts_outer->m_prIDs[npid]].push_back(dbs.m_pts_outer->m_ind[npid]);
+          int outer_parentIds = dbs.m_pts_outer->m_prIDs[npid];
+          (*p_cur_insert)[outer_parentIds].push_back(pid);
+          (*p_cur_insert)[outer_parentIds].push_back(dbs.m_pts_outer->m_ind[npid]);
         }
         
         //traverse the local neighbors and perform union operation
@@ -813,7 +816,8 @@ namespace NWUClustering {
       triples = (*p_cur_insert)[tid].size()/2;
       local_count += triples;
       for(pid = 0; pid < triples; pid++) {
-        v1 = (*p_cur_insert)[tid][2 * pid];
+        int twoPid = 2 * pid;
+        v1 = (*p_cur_insert)[tid][twoPid];
         root1 = v1;
         while(dbs.m_parents[root1] != root1) {
           root1 = dbs.m_parents[root1];
@@ -825,7 +829,7 @@ namespace NWUClustering {
           v1 = tmp;
         }
 
-        (*p_cur_insert)[tid][2 * pid] = root1;
+        (*p_cur_insert)[tid][twoPid] = root1;
       }
     }
 
@@ -838,7 +842,7 @@ namespace NWUClustering {
 
     vector <vector <int> > parser;
     vector <int> init_ex;
-    parser.resize(temp, init_ex);
+    parser.resize(numPts, init_ex);
     
     while(1) {
       pswap = p_cur_insert;

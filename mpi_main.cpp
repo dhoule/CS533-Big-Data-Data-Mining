@@ -30,12 +30,13 @@
 
 static void usage(char *argv0) {
   const char *params =
-    "Usage: %s [switches] -i filename -b -m minpts -e epsilon -o output\n"
+    "Usage: %s [switches] -i filename -b -m minpts -e epsilon -o output [-k seed_percentage]\n"
     " -i filename : file containing input data to be clustered\n"
     " -b    : input file is in binary format (default, binary and currently the only supported format)\n"
     " -m minpts : input parameter of DBSCAN, min points to form a cluster, e.g. 2\n"
     " -e epsilon  : input parameter of DBSCAN, radius or threshold on neighbourhoods retrieved, e.g. 0.8\n"
-    " -o output : clustering results, format, (points coordinates, cluster id)\n\n";
+    " -o output : clustering results, format, (points coordinates, cluster id)\n"
+    " -k seed_percentage : the percentage of points for each node to use; range is [0.0,1.0), with default value of 1.0\n\n";
   
   fprintf(stderr, params, argv0);
   exit(-1);
@@ -45,7 +46,7 @@ static void usage(char *argv0) {
 int main(int argc, char** argv) {
   int   opt;
   int   minPts;
-  double  eps, start;
+  double  eps, start, seed_percentage, preprocessing_start, actual_start;
   char*   outfilename;
   int     isBinaryFile;
   char*   infilename;
@@ -58,11 +59,13 @@ int main(int argc, char** argv) {
   // some default values
   minPts = -1;
   eps = -1;
+  seed_percentage = 1.0;
   isBinaryFile = 1; // default binary file
   outfilename = NULL;
   infilename = NULL;
-  // determine command line options // TODO need to modify this for SNG Alg
-  while ((opt=getopt(argc,argv,"i:m:e:o:?b"))!= EOF) {
+
+  // determine command line options 
+  while ((opt=getopt(argc,argv,"i:m:e:o:k:?b"))!= EOF) {
     switch (opt) {
       case 'i':
         infilename = optarg;
@@ -78,6 +81,9 @@ int main(int argc, char** argv) {
         break;
       case 'o':
         outfilename = optarg;
+        break;
+      case 'k':
+        seed_percentage = atof(optarg);
         break;
       case '?':
         usage(argv[0]);
@@ -108,16 +114,23 @@ int main(int argc, char** argv) {
     MPI_Finalize();
     return 0;
   }
+
+  // make sure `seed_percentage` is within the specified range
+  if((0.0 >= seed_percentage) || (1.0 < seed_percentage)) {
+    if(rank == proc_of_interest) cout << "\n\nFor -k, please use a percentage greater than 0.0 and less than or equal to 1.0." << endl;
+    MPI_Finalize();
+    return 0;
+  }
   // declaring the ClusteringAlgo object 'dbs'
   NWUClustering::ClusteringAlgo dbs;
   // initialize some paramaters
-  dbs.set_dbscan_params(eps, minPts); // TODO need to modify this for SNG Alg
+  dbs.set_dbscan_params(eps, minPts, seed_percentage); // TODO need to modify this for SNG Alg
 
   if(rank == proc_of_interest) cout << "Epsilon: " << eps << " MinPts: " << minPts << endl;
   // Make ALL of the nodes/processes wait till they ALL get to this point
   MPI_Barrier(MPI_COMM_WORLD);
   start = MPI_Wtime();
-
+  
   if(rank == proc_of_interest) cout << "Reading points from file: " << infilename << endl;
   // determine if there was an error reading from the binary file
   if(dbs.read_file(infilename, isBinaryFile) == -1) {
@@ -129,27 +142,29 @@ int main(int argc, char** argv) {
   // Make ALL of the nodes/processes wait till they ALL get to this point
   MPI_Barrier(MPI_COMM_WORLD);
   start = MPI_Wtime();
-  
-  // parttition the data file geometrically: preprocessing step
+  preprocessing_start = start; // used to calculate total preprocessing time
+  // parttition the data file geometrically: preprocessing_start, actual_start step
   start_partitioning(dbs);
   MPI_Barrier(MPI_COMM_WORLD);
   if(rank == proc_of_interest) cout << "Partitioning the data geometrically took " << MPI_Wtime() - start << " seconds [pre_processing]" << endl;
   
-  // gather extra(outer) points that falls within the eps radius from the boundary: preprocessing step
+  // gather extra(outer) points that falls within the eps radius from the boundary: preprocessing_start, actual_start step
   start = MPI_Wtime();
   get_extra_points(dbs);
   MPI_Barrier(MPI_COMM_WORLD);
   if(rank == proc_of_interest) cout << "Gathering extra point took " << MPI_Wtime() - start << " seconds [pre_processing]" << endl;
     
-  // build the kdtrees: preprocessing step 
+  // build the kdtrees: preprocessing_start, actual_start step 
   start = MPI_Wtime();
   dbs.build_kdtree();
   dbs.build_kdtree_outer();
+  // TODO call GetSeeds() from here
   MPI_Barrier(MPI_COMM_WORLD);
   if(rank == proc_of_interest) cout << "Build kdtree took " << MPI_Wtime() - start << " seconds [pre_processing]\n" << endl;
-  
+  if(rank == proc_of_interest) cout << "\nTotal preprocessing time: " << MPI_Wtime() - preprocessing_start << " seconds\n" << endl;
   //run the DBSCAN algorithm
   start = MPI_Wtime();
+  actual_start = start;
   run_dbscan_algo_uf_mpi_interleaved(dbs);
   MPI_Barrier(MPI_COMM_WORLD);
   if(rank == proc_of_interest) cout << "Parallel DBSCAN (init, local computation, and merging) took " << MPI_Wtime() - start << " seconds\n"<< endl;
@@ -158,7 +173,10 @@ int main(int argc, char** argv) {
   start = MPI_Wtime();
   dbs.get_clusters_distributed(); 
   if(rank == proc_of_interest) cout << "Assigning cluster IDs to points " << MPI_Wtime() - start << " seconds [post_processing]" << endl;
-  
+  if(rank == proc_of_interest) cout << "\nTotal time for actual algorithm (including assigning cluster IDs): " << MPI_Wtime() - actual_start << " seconds\n" << endl;
+  if(rank == proc_of_interest) cout << "\nTotal time for evrything: " << MPI_Wtime() - preprocessing_start << " seconds\n" << endl;
+
+
   if(outfilename != NULL) {
     start = MPI_Wtime();  
 

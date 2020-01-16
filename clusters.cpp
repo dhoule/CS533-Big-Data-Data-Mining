@@ -181,10 +181,9 @@ namespace NWUClustering {
         for(int ll = 0; ll < temp; ll++)
           m_pts->m_points[ll].resize(dims);
 
-        // point_coord_type = typedef float point_coord_type; in 'utils.h'
-        point_coord_type* pt;         
+        // point_coord_type = typedef float point_coord_type; in 'utils.h'     
         // initializes 'pt' variable
-        pt = (point_coord_type*) malloc(dims * sizeof(point_coord_type));
+        point_coord_type* pt = new point_coord_type[dims * sizeof(point_coord_type)];
 
         // fseek to the respective position of the file
         file.seekg(lower * dims * sizeof(point_coord_type), ios::cur);
@@ -197,15 +196,15 @@ namespace NWUClustering {
           
           for (j = 0; j < dims; j++) {
             m_pts->m_points[i][j] = pt[j];
-            
+            temp = pt[j];
             if(i == 0) { 
-              m_pts->m_box[j].upper = m_pts->m_points[i][j];
-              m_pts->m_box[j].lower = m_pts->m_points[i][j];
+              m_pts->m_box[j].upper = temp;
+              m_pts->m_box[j].lower = temp;
             } else {
-              if(m_pts->m_box[j].lower > m_pts->m_points[i][j])
-                m_pts->m_box[j].lower = m_pts->m_points[i][j];
-              else if(m_pts->m_box[j].upper < m_pts->m_points[i][j])
-                m_pts->m_box[j].upper = m_pts->m_points[i][j];
+              if(m_pts->m_box[j].lower > temp)
+                m_pts->m_box[j].lower = temp;
+              else if(m_pts->m_box[j].upper < temp)
+                m_pts->m_box[j].upper = temp;
             }
           }
         }
