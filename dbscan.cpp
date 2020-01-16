@@ -636,8 +636,8 @@ namespace NWUClustering {
     // Function gets the union of 2 tress, to create a larger cluster
   void run_dbscan_algo_uf_mpi_interleaved(ClusteringAlgo& dbs) {
     double start = MPI_Wtime();     
-    int i, pid, j, k, npid, prID;
-    int rank, nproc, mpi_namelen;
+    int i, pid, j, k, npid;
+    int rank, nproc;
     kdtree2_result_vector ne;
     kdtree2_result_vector ne_outer;
     
@@ -645,10 +645,10 @@ namespace NWUClustering {
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
     // initialize some parameters
-    int temp = dbs.m_pts->m_i_num_points;
+    int numPts = dbs.m_pts->m_i_num_points; 
     // assign parent to itestf
-    dbs.m_parents.resize(temp, -1);
-    dbs.m_parents_pr.resize(temp, -1);
+    dbs.m_parents.resize(numPts, -1);
+    dbs.m_parents_pr.resize(numPts, -1);
 
     int total_points = 0, points_per_pr[nproc], start_pos[nproc];
 
@@ -670,16 +670,16 @@ namespace NWUClustering {
         vec_prID[k++] = i;
     }
     
-    // restting the membership and corepoints values
-    dbs.m_member.resize(temp, 0);
-    dbs.m_corepoint.resize(temp, 0);
-
+    // resetting the membership and corepoints values
+    dbs.m_member.resize(numPts, 0);
+    dbs.m_corepoint.resize(numPts, 0);
+    // returns the starting address of the `the_data`
     vector<int>* ind = dbs.m_kdtree->getIndex();
     vector<int>* ind_outer = dbs.m_kdtree_outer->getIndex();
 
-    // setting paretns to itself and corresponding proc IDs
-    for(i = 0; i < temp; i++) {
-      pid = (*ind)[i];
+    // setting parents to itself and corresponding proc IDs
+    for(i = 0; i < numPts; i++) { // TODO this is the looping over all of the points
+      pid = (*ind)[i]; // TODO need to change how the Point ID is retrieved
       dbs.m_parents[pid] = pid;
       dbs.m_parents_pr[pid] = rank;
     }
@@ -695,7 +695,7 @@ namespace NWUClustering {
     merge_send2.resize(nproc, init);
     
     // reserving communication buffer memory
-    int tempPlusNodes = temp * nproc;
+    int tempPlusNodes = numPts * nproc;
     for(pid = 0; pid < nproc; pid++) {
       merge_received[pid].reserve(tempPlusNodes);
       merge_send1[pid].reserve(tempPlusNodes);
@@ -717,15 +717,15 @@ namespace NWUClustering {
     
     // the main part of the DBSCAN algorithm (called local computation)
     start = MPI_Wtime();
-    for(i = 0; i < temp; i++) { // TODO this is the looping over all of the points
-      pid = (*ind)[i];
+    for(i = 0; i < numPts; i++) { // TODO this is the looping over all of the points
+      pid = (*ind)[i]; // TODO need to change how the Point ID is retrieved
       // getting the local neighborhoods of local point
       ne.clear();
       dbs.m_kdtree->r_nearest_around_point(pid, 0, dbs.m_epsSquare, ne);
       
       ne_outer.clear();
       vector<float> qv(dbs.m_pts->m_i_dims);
-
+      // `qv` stands for Query Vector. It is a vector of the current point's dimensions.
       for (int u = 0; u < dbs.m_pts->m_i_dims; u++) {
         qv[u] = dbs.m_kdtree->the_data[pid][u];
       }
@@ -842,7 +842,7 @@ namespace NWUClustering {
 
     vector <vector <int> > parser;
     vector <int> init_ex;
-    parser.resize(temp, init_ex);
+    parser.resize(numPts, init_ex);
     
     while(1) {
       pswap = p_cur_insert;
