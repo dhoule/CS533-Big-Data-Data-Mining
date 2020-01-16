@@ -57,6 +57,8 @@ namespace NWUClustering {
 
     vector <int> m_member; // Values are either 0 or 1. It's size = size_of(m_pts.m_i_num_points). Used to determine if a border point or not.
     vector <int> m_corepoint; // Values are either 0 or 1. It's size = size_of(m_pts.m_i_num_points). Used to determine centroids.
+
+    vector <int> neededIndices; // Values are indices of points to be used, instead of the entire set. If `m_perc_of_dataset` == 1.0, it will be empty.
   };  
 
   void run_dbscan_algo_uf_mpi_interleaved(ClusteringAlgo& dbs); // union find dbscan algorithm using mpi with interleaved communication
