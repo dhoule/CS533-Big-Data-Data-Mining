@@ -636,7 +636,20 @@ namespace NWUClustering {
     option, if given.
   */
   void ClusteringAlgo::getSeeds() {
-    cout << "\n\nm_perc_of_dataset: " << m_perc_of_dataset << endl;
+    // only need to do something if `m_perc_of_dataset` != 1.0
+    if(1.0 != m_perc_of_dataset) {
+      int temp, i = 0, totsPts = m_pts->m_i_num_points;
+      int numPts = totsPts * m_perc_of_dataset;
+      // Reserve enough memory for the needed elements
+      neededIndices.reserve(numPts);
+      while(i < numPts) {
+        temp = rand() % totsPts;
+        if(find(neededIndices.begin(), neededIndices.end(), temp) == neededIndices.end()) {
+          neededIndices.push_back(temp);
+          i++;
+        }
+      }
+    }
   }
 
   // "uf" == "Union Find"
