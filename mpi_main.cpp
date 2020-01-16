@@ -159,6 +159,7 @@ int main(int argc, char** argv) {
   dbs.build_kdtree();
   dbs.build_kdtree_outer();
   // TODO call GetSeeds() from here
+  dbs.getSeeds();
   MPI_Barrier(MPI_COMM_WORLD);
   if(rank == proc_of_interest) cout << "Build kdtree took " << MPI_Wtime() - start << " seconds [pre_processing]\n" << endl;
   if(rank == proc_of_interest) cout << "\nTotal preprocessing time: " << MPI_Wtime() - preprocessing_start << " seconds\n" << endl;
