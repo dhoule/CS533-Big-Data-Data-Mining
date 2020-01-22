@@ -27,6 +27,7 @@
 
 #include "utils.h"
 #include "clusters.h"
+#include <time.h>
 
 namespace NWUClustering {
 
