@@ -363,8 +363,8 @@ namespace NWUClustering {
     int total_points = 0;
     MPI_Allreduce(&m_pts->m_i_num_points, &total_points, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
     
-    if(rank == proc_of_interest) cout << "Points in clusters " << total_points_in_cluster_final << " Noise " << (total_points - total_points_in_cluster_final) << " Total points " << total_points << endl;
-    if(rank == proc_of_interest) cout << "Total number of clusters " << total_final_cluster_root << endl;
+    if(rank == proc_of_interest) cout << "Points in clusters: " << total_points_in_cluster_final << ", Noise: " << (total_points - total_points_in_cluster_final) << ", Total points: " << total_points << endl;
+    if(rank == proc_of_interest) cout << "Total number of clusters: " << total_final_cluster_root << endl;
     
     vector<int> global_roots; // used to determine the roots in each node
     global_roots.resize(nproc, 0); // set the size and initialize to 0
@@ -640,6 +640,8 @@ namespace NWUClustering {
     if(1.0 != m_perc_of_dataset) {
       int temp, i = 0, totsPts = m_pts->m_i_num_points;
       int numPts = totsPts * m_perc_of_dataset;
+      // Use current time as seed for random generator 
+      srand(time(NULL));
       // Reserve enough memory for the needed elements
       neededIndices.reserve(numPts);
       while(i < numPts) {
@@ -649,6 +651,7 @@ namespace NWUClustering {
           i++;
         }
       }
+      sort(neededIndices.begin(), neededIndices.end());
     }
   }
 
@@ -656,17 +659,21 @@ namespace NWUClustering {
   // called in mpi_main.cpp
     // Function gets the union of 2 tress, to create a larger cluster
   void run_dbscan_algo_uf_mpi_interleaved(ClusteringAlgo& dbs) {
+    // initialize some parameters
+    int numPts = dbs.m_pts->m_i_num_points; 
     double start = MPI_Wtime();     
     int i, pid, j, k, npid;
     int rank, nproc;
+    bool sNG = (1.0 == dbs.m_perc_of_dataset ? false : true );
+    int loopCount = (sNG ? dbs.neededIndices.size() : numPts);
+
     kdtree2_result_vector ne;
     kdtree2_result_vector ne_outer;
     
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
-    // initialize some parameters
-    int numPts = dbs.m_pts->m_i_num_points; 
+    
     // assign parent to itestf
     dbs.m_parents.resize(numPts, -1);
     dbs.m_parents_pr.resize(numPts, -1);
@@ -687,8 +694,9 @@ namespace NWUClustering {
 
     k = 0;
     for(i = 0; i < nproc; i++) {
-      for(j = 0; j < points_per_pr[i]; j++)
+      for(j = 0; j < points_per_pr[i]; j++) {
         vec_prID[k++] = i;
+      }
     }
     
     // resetting the membership and corepoints values
@@ -697,12 +705,13 @@ namespace NWUClustering {
     // returns the starting address of the `the_data`
     vector<int>* ind = dbs.m_kdtree->getIndex();
     vector<int>* ind_outer = dbs.m_kdtree_outer->getIndex();
-
+    // Still need this to keep all points available to "the chosen" few. 
+      // When changed to use `loopCount` and "random picking" a seg fault occures
     // setting parents to itself and corresponding proc IDs
-    for(i = 0; i < numPts; i++) { // TODO this is the looping over all of the points
-      pid = (*ind)[i]; // TODO need to change how the Point ID is retrieved
-      dbs.m_parents[pid] = pid;
-      dbs.m_parents_pr[pid] = rank;
+    for(i = 0; i < numPts; i++) { 
+      pid = (*ind)[i]; 
+      dbs.m_parents[pid] = pid; // Elements hold the pointers of the clustering tree
+      dbs.m_parents_pr[pid] = rank; // Elements hold the pointers for which node the point is in
     }
 
     vector < vector <int > > merge_received;
@@ -732,14 +741,15 @@ namespace NWUClustering {
     p_cur_send = &merge_send1;
     p_cur_insert = &merge_send2;
 
-    if(rank == proc_of_interest) cout << "Init time " << MPI_Wtime() - start << endl; 
+    // if(rank == proc_of_interest) cout << "Init time " << MPI_Wtime() - start << endl; 
 
     MPI_Barrier(MPI_COMM_WORLD);
     
     // the main part of the DBSCAN algorithm (called local computation)
     start = MPI_Wtime();
-    for(i = 0; i < numPts; i++) { // TODO this is the looping over all of the points
-      pid = (*ind)[i]; // TODO need to change how the Point ID is retrieved
+    for(i = 0; i < loopCount; i++) { 
+
+      pid = (sNG ? (*ind)[dbs.neededIndices.at(i)] : (*ind)[i]);
       // getting the local neighborhoods of local point
       ne.clear();
       dbs.m_kdtree->r_nearest_around_point(pid, 0, dbs.m_epsSquare, ne);
@@ -756,8 +766,9 @@ namespace NWUClustering {
         dbs.m_kdtree_outer->r_nearest(qv, dbs.m_epsSquare, ne_outer);
     
       qv.clear();
-      int ne_outer_size = ne_outer.size();
-      if(ne.size() + ne_outer_size >= dbs.m_minPts) {
+      int ne_outer_size = ne_outer.size(); 
+      int ne_size = ne.size(); 
+      if(ne_size + ne_outer_size >= dbs.m_minPts) {
         // pid is a core point
         root = pid;
         dbs.m_corepoint[pid] = 1;
@@ -765,46 +776,46 @@ namespace NWUClustering {
         
         // traverse the remote neighbors and add in the communication buffers  
         for(j = 0; j < ne_outer_size; j++) {
-          npid = ne_outer[j].idx;
-          int outer_parentIds = dbs.m_pts_outer->m_prIDs[npid];
+          npid = ne_outer[j].idx; 
+          int outer_parentIds = dbs.m_pts_outer->m_prIDs[npid]; 
           (*p_cur_insert)[outer_parentIds].push_back(pid);
-          (*p_cur_insert)[outer_parentIds].push_back(dbs.m_pts_outer->m_ind[npid]);
+          (*p_cur_insert)[outer_parentIds].push_back(dbs.m_pts_outer->m_ind[npid]); 
         }
         
         //traverse the local neighbors and perform union operation
-        for (j = 0; j < ne.size(); j++) {
+        for (j = 0; j < ne_size; j++) {
           npid = ne[j].idx;
           
           // get the root containing npid
-          root1 = npid;
-          root2 = root;
+          root1 = npid; 
+          root2 = root; 
           if(dbs.m_corepoint[npid] == 1 || dbs.m_member[npid] == 0) {
             dbs.m_member[npid] = 1;
-
+            
             // REMS algorithm to (union) merge the trees
             while(dbs.m_parents[root1] != dbs.m_parents[root2]) {
-              if(dbs.m_parents[root1] < dbs.m_parents[root2]) {
-                if(dbs.m_parents[root1] == root1) {
+              if(dbs.m_parents[root1] < dbs.m_parents[root2]) { 
+                if(dbs.m_parents[root1] == root1) { 
                   dbs.m_parents[root1] = dbs.m_parents[root2];
-                  root = dbs.m_parents[root2];
+                  root = dbs.m_parents[root2]; 
                   break;
                 }
 
                 // splicing comression technique
                 int z = dbs.m_parents[root1];
                 dbs.m_parents[root1] = dbs.m_parents[root2];
-                root1 = z;
-              } else {
-                if(dbs.m_parents[root2] == root2) {
+                root1 = z; 
+              } else { 
+                if(dbs.m_parents[root2] == root2) { 
                   dbs.m_parents[root2] = dbs.m_parents[root1];
-                  root = dbs.m_parents[root1];
+                  root = dbs.m_parents[root1]; 
                   break;
                 }
 
                 // splicing compressio technique
                 int z = dbs.m_parents[root2];
                 dbs.m_parents[root2] = dbs.m_parents[root1];                  
-                root2 = z;
+                root2 = z; 
               }
             }
           }
@@ -817,7 +828,7 @@ namespace NWUClustering {
     int v1, v2, par_proc, triples, local_count, global_count;
     double temp_inter_med, inter_med;
 
-    if(rank == proc_of_interest) cout << "Local computation took " << MPI_Wtime() - start << endl;
+    // if(rank == proc_of_interest) cout << "Local computation took " << MPI_Wtime() - start << endl;
 
     inter_med = MPI_Wtime();
 
@@ -1032,7 +1043,7 @@ namespace NWUClustering {
       i++;
     }
 
-    if(rank == proc_of_interest) cout << "Merging took " << MPI_Wtime() - start << endl;
+    // if(rank == proc_of_interest) cout << "Merging took " << MPI_Wtime() - start << endl;
 
     pswap = NULL;
     p_cur_insert = NULL;
