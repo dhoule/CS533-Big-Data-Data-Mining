@@ -770,7 +770,7 @@ namespace NWUClustering {
       int ne_size = ne.size(); 
       if(ne_size + ne_outer_size >= dbs.m_minPts) {
 
-        build_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
+        get_neighborhood_points(dbs, ne, ne_outer, pid, p_cur_insert);
 
         // // pid is a core point
         // root = pid;
@@ -1073,7 +1073,7 @@ namespace NWUClustering {
   }
 
 
-  void build_neighborhood(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid, vector < vector <int > >* p_cur_insert) {
+  void get_neighborhood_points(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid, vector < vector <int > >* p_cur_insert) {
     
     int root; // initially set to pid
     int npid; // Not the pid
