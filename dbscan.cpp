@@ -769,60 +769,7 @@ namespace NWUClustering {
       int ne_outer_size = ne_outer.size(); 
       int ne_size = ne.size(); 
       if(ne_size + ne_outer_size >= dbs.m_minPts) {
-
         get_neighborhood_points(dbs, ne, ne_outer, pid, p_cur_insert);
-
-        // // pid is a core point
-        // root = pid;
-        // dbs.m_corepoint[pid] = 1;
-        // dbs.m_member[pid] = 1;
-        
-        // // traverse the remote neighbors and add in the communication buffers  
-        // for(j = 0; j < ne_outer_size; j++) {
-        //   npid = ne_outer[j].idx; 
-        //   int outer_parentIds = dbs.m_pts_outer->m_prIDs[npid]; 
-        //   (*p_cur_insert)[outer_parentIds].push_back(pid);
-        //   (*p_cur_insert)[outer_parentIds].push_back(dbs.m_pts_outer->m_ind[npid]); 
-        // }
-        
-        // //traverse the local neighbors and perform union operation
-        // for (j = 0; j < ne_size; j++) {
-        //   npid = ne[j].idx;
-          
-        //   // get the root containing npid
-        //   root1 = npid; 
-        //   root2 = root; 
-        //   if(dbs.m_corepoint[npid] == 1 || dbs.m_member[npid] == 0) {
-        //     dbs.m_member[npid] = 1;
-            
-        //     // REMS algorithm to (union) merge the trees
-        //     while(dbs.m_parents[root1] != dbs.m_parents[root2]) {
-        //       if(dbs.m_parents[root1] < dbs.m_parents[root2]) { 
-        //         if(dbs.m_parents[root1] == root1) { 
-        //           dbs.m_parents[root1] = dbs.m_parents[root2];
-        //           root = dbs.m_parents[root2]; 
-        //           break;
-        //         }
-
-        //         // splicing comression technique
-        //         int z = dbs.m_parents[root1];
-        //         dbs.m_parents[root1] = dbs.m_parents[root2];
-        //         root1 = z; 
-        //       } else { 
-        //         if(dbs.m_parents[root2] == root2) { 
-        //           dbs.m_parents[root2] = dbs.m_parents[root1];
-        //           root = dbs.m_parents[root1]; 
-        //           break;
-        //         }
-
-        //         // splicing compressio technique
-        //         int z = dbs.m_parents[root2];
-        //         dbs.m_parents[root2] = dbs.m_parents[root1];                  
-        //         root2 = z; 
-        //       }
-        //     }
-        //   }
-        // }
       }
     }
       
