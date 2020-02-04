@@ -1006,11 +1006,13 @@ namespace NWUClustering {
     init.clear();
   }
 
+  // called in `run_dbscan_algo_uf_mpi_interleaved` function.
+    // Attempts to find local and remote points within the given range; eps; of the indexed point; `pid`.
   void get_neighborhood_points(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid) {
-    // getting the local neighborhoods of local point
+    
     ne.clear();
     ne_outer.clear();
-
+    // getting the local neighborhoods of local point
     dbs.m_kdtree->r_nearest_around_point(pid, 0, dbs.m_epsSquare, ne);
     
     vector<float> qv(dbs.m_pts->m_i_dims);
@@ -1026,6 +1028,13 @@ namespace NWUClustering {
     qv.clear();
   }
 
+  /* 
+    called in `run_dbscan_algo_uf_mpi_interleaved` function.
+    Only called if the amount of local and remote points found are equal to, or greater than, the minimum points
+    needed to make a cluster. 
+    The remote points are put into a communication buffer, specified by `p_cur_insert`.
+    The local points are joined via a union opperation using the REMS algorithm.
+  */ 
   void unionize_neighborhood(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid, vector < vector <int > >* p_cur_insert) {
     
     int root; // initially set to pid
