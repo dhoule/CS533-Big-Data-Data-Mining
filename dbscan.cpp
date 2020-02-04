@@ -750,26 +750,13 @@ namespace NWUClustering {
     for(i = 0; i < loopCount; i++) { 
 
       pid = (sNG ? (*ind)[dbs.neededIndices.at(i)] : (*ind)[i]);
-      // getting the local neighborhoods of local point
-      ne.clear();
-      dbs.m_kdtree->r_nearest_around_point(pid, 0, dbs.m_epsSquare, ne);
-      
-      ne_outer.clear();
-      vector<float> qv(dbs.m_pts->m_i_dims);
-      // `qv` stands for Query Vector. It is a vector of the current point's dimensions.
-      for (int u = 0; u < dbs.m_pts->m_i_dims; u++) {
-        qv[u] = dbs.m_kdtree->the_data[pid][u];
-      }
 
-      // getting the remote neighborhood of the local point
-      if(dbs.m_pts_outer->m_i_num_points > 0)
-        dbs.m_kdtree_outer->r_nearest(qv, dbs.m_epsSquare, ne_outer);
-    
-      qv.clear();
+      get_neighborhood_points(dbs, ne, ne_outer, pid);
+      
       int ne_outer_size = ne_outer.size(); 
       int ne_size = ne.size(); 
       if(ne_size + ne_outer_size >= dbs.m_minPts) {
-        get_neighborhood_points(dbs, ne, ne_outer, pid, p_cur_insert);
+        unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
       }
     }
       
@@ -1019,8 +1006,27 @@ namespace NWUClustering {
     init.clear();
   }
 
+  void get_neighborhood_points(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid) {
+    // getting the local neighborhoods of local point
+    ne.clear();
+    ne_outer.clear();
 
-  void get_neighborhood_points(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid, vector < vector <int > >* p_cur_insert) {
+    dbs.m_kdtree->r_nearest_around_point(pid, 0, dbs.m_epsSquare, ne);
+    
+    vector<float> qv(dbs.m_pts->m_i_dims);
+    // `qv` stands for Query Vector. It is a vector of the current point's dimensions/attributes.
+    for (int u = 0; u < dbs.m_pts->m_i_dims; u++) {
+      qv[u] = dbs.m_kdtree->the_data[pid][u];
+    }
+
+    // getting the remote neighborhood of the local point
+    if(dbs.m_pts_outer->m_i_num_points > 0)
+      dbs.m_kdtree_outer->r_nearest(qv, dbs.m_epsSquare, ne_outer);
+  
+    qv.clear();
+  }
+
+  void unionize_neighborhood(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid, vector < vector <int > >* p_cur_insert) {
     
     int root; // initially set to pid
     int npid; // Not the pid
