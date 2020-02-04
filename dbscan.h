@@ -64,7 +64,10 @@ namespace NWUClustering {
 
   void run_dbscan_algo_uf_mpi_interleaved(ClusteringAlgo& dbs); // union find dbscan algorithm using mpi with interleaved communication
 
-  void get_neighborhood_points(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid, vector < vector <int > >* p_cur_insert); // builds the neighborhood of a centroid
+  void get_neighborhood_points(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid); // Attempts to find points, local and remote, for a given point.
+
+  // builds the neighborhood of a centroid. Does this by performing the union operation on local points and adding remote points to communication buffer.
+  void unionize_neighborhood(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid, vector < vector <int > >* p_cur_insert); 
 };
 
 #endif
