@@ -751,6 +751,8 @@ namespace NWUClustering {
 
       pid = (sNG ? (*ind)[dbs.neededIndices.at(i)] : (*ind)[i]);
 
+      ne.clear();
+      ne_outer.clear();
       get_neighborhood_points(dbs, ne, ne_outer, pid);
       
       int ne_outer_size = ne_outer.size(); 
@@ -1010,8 +1012,6 @@ namespace NWUClustering {
     // Attempts to find local and remote points within the given range; eps; of the indexed point; `pid`.
   void get_neighborhood_points(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid) {
     
-    ne.clear();
-    ne_outer.clear();
     // getting the local neighborhoods of local point
     dbs.m_kdtree->r_nearest_around_point(pid, 0, dbs.m_epsSquare, ne);
     
