@@ -655,6 +655,24 @@ namespace NWUClustering {
     }
   }
 
+  void ClusteringAlgo::modify_status_vectors(kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer) {
+    int ne_size = ne.size();
+    int ne_outer_size = ne_outer.size();
+    int index;
+    // loop over `ne_outer` as it should be shorter than `ne`
+    for(int i = 0; i < ne_outer_size; i++){
+      index = ne_outer[i].idx;
+      if(find(assessed_outer.begin(),assessed_outer.end(),index) == assessed_outer.end())
+        assessed_outer.push_back(index);
+    }
+    // loop over `ne`
+    for(int i = 0; i < ne_size; i++){
+      index = ne[i].idx;
+      if((find(triage.begin(),triage.end(),index) == triage.end()) && (find(assessed.begin(),assessed.end(),index) == assessed.end()))
+        triage.push_back(index);
+    } 
+  }
+
   // "uf" == "Union Find"
   // called in mpi_main.cpp
     // Function gets the union of 2 tress, to create a larger cluster
