@@ -45,6 +45,9 @@ namespace NWUClustering {
 
     void getSeeds();
 
+    // Modifies the  `triage` and `assessed_outer` vectors to determine if a point has been seen before or not
+    void modify_status_vectors(kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer);
+
   public:
     
     double  m_epsSquare; // AKA radius. It is the square of the "radius" given by the user
@@ -72,6 +75,7 @@ namespace NWUClustering {
 
   // builds the neighborhood of a centroid. Does this by performing the union operation on local points and adding remote points to communication buffer.
   void unionize_neighborhood(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid, vector < vector <int > >* p_cur_insert); 
+
 };
 
 #endif
