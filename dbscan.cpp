@@ -762,12 +762,15 @@ namespace NWUClustering {
     // if(rank == proc_of_interest) cout << "Init time " << MPI_Wtime() - start << endl; 
 
     MPI_Barrier(MPI_COMM_WORLD);
-    
     // the main part of the DBSCAN algorithm (called local computation)
     start = MPI_Wtime();
     for(i = 0; i < loopCount; i++) { 
-
+      
       pid = (sNG ? (*ind)[dbs.neededIndices.at(i)] : (*ind)[i]);
+      // if the SNG Alg is to be used, but the "seed point" has been seen before, there is no need to continue
+        // TODO Does `triage()` really need to be checked???
+      if(sNG && !dbs.triage.empty() && ((find(dbs.triage.begin(),dbs.triage.end(),pid) == dbs.triage.end()) && (find(dbs.assessed.begin(),dbs.assessed.end(),pid) == dbs.assessed.end())))
+        continue;
 
       ne.clear();
       ne_outer.clear();
@@ -776,7 +779,37 @@ namespace NWUClustering {
       int ne_outer_size = ne_outer.size(); 
       int ne_size = ne.size(); 
       if(ne_size + ne_outer_size >= dbs.m_minPts) {
-        unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
+        // if(rank == 5) cout << "\n----------------------------------\n778 [" << rank << "] pid: " << pid << endl;
+        // The status vectors are only needed when the SNG Alg is being used
+        if(sNG) {
+          // Just go ahead and add `pid` to the `assessed` vector
+          dbs.assessed.push_back(pid);
+          dbs.modify_status_vectors(ne, ne_outer); // update `triage` & `assessed_outer` vectors
+          // if(rank == 5) cout << "785 [" << rank << "] dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
+          while(!dbs.triage.empty()) {
+            unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
+            // Clear `ne` & `ne_outer` vectors
+            ne.clear();
+            ne_outer.clear();
+            // Pop the first element of `triage` off the front, and store in local variable `pid`
+            pid = dbs.triage.front();
+            // if(rank == 5) cout << "793 [" << rank << "] pre removal dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
+            dbs.triage.erase(dbs.triage.begin());
+            // `pid` is supposed to be removed from the `triage` vector, and added to the `assessed` vector
+            dbs.assessed.push_back(pid);
+            // if(rank == 5) cout << "795 [" << rank << "] pid: " << pid << endl;
+            // if(rank == 5) cout << "796 [" << rank << "] post removal dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
+            // Attempt to find more points via calling get_neighborhood_points function, given the new centroid point
+            get_neighborhood_points(dbs, ne, ne_outer, pid);
+            ne_outer_size = ne_outer.size(); 
+            ne_size = ne.size(); 
+            if(ne_size + ne_outer_size >= dbs.m_minPts) {
+              dbs.modify_status_vectors(ne, ne_outer); // update `triage` & `assessed_outer` vectors
+            } 
+          }
+        } else {
+          unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
+        }
       }
     }
       
@@ -1063,6 +1096,11 @@ namespace NWUClustering {
     int j;
     int ne_size = ne.size();
     int ne_outer_size = ne_outer.size();
+    bool sNG = (1.0 == dbs.m_perc_of_dataset ? false : true ); // determine if the SNG Alg is being used
+    // TODO delete after testing
+    int rank, nproc;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
     // pid is a core point
     root = pid;
@@ -1070,11 +1108,26 @@ namespace NWUClustering {
     dbs.m_member[pid] = 1;
     
     // traverse the remote neighbors and add in the communication buffers  
-    for(j = 0; j < ne_outer_size; j++) {
-      npid = ne_outer[j].idx; 
-      int outer_parentIds = dbs.m_pts_outer->m_prIDs[npid]; 
-      (*p_cur_insert)[outer_parentIds].push_back(pid);
-      (*p_cur_insert)[outer_parentIds].push_back(dbs.m_pts_outer->m_ind[npid]); 
+    if(sNG) {
+      // The SNG is being used
+      for(j = 0; j < ne_outer_size; j++) {
+        npid = ne_outer[j].idx; 
+        // TODO This needs to change completely. It is ubsurdly inefficient!!!
+        // If `npid` has been seen before, just move to the next iteration
+        if(find(dbs.assessed_outer.begin(),dbs.assessed_outer.end(),npid) != dbs.assessed_outer.end())
+          continue;
+
+        int outer_parentIds = dbs.m_pts_outer->m_prIDs[npid]; 
+        (*p_cur_insert)[outer_parentIds].push_back(pid);
+        (*p_cur_insert)[outer_parentIds].push_back(dbs.m_pts_outer->m_ind[npid]); 
+      }
+    } else {
+      for(j = 0; j < ne_outer_size; j++) {
+        npid = ne_outer[j].idx; 
+        int outer_parentIds = dbs.m_pts_outer->m_prIDs[npid]; 
+        (*p_cur_insert)[outer_parentIds].push_back(pid);
+        (*p_cur_insert)[outer_parentIds].push_back(dbs.m_pts_outer->m_ind[npid]); 
+      }
     }
     
     //traverse the local neighbors and perform union operation
