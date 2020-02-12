@@ -666,6 +666,8 @@ namespace NWUClustering {
       if((find(triage.begin(),triage.end(),index) == triage.end()) && (find(assessed.begin(),assessed.end(),index) == assessed.end()))
         triage.push_back(index);
     } 
+    // `triage` needs to be sorted
+    sort(triage.begin(), triage.end());
   }
 
   // "uf" == "Union Find"
@@ -764,6 +766,7 @@ namespace NWUClustering {
       pid = (sNG ? (*ind)[dbs.neededIndices.at(i)] : (*ind)[i]);
       // if the SNG Alg is to be used, but the "seed point" has been seen before, there is no need to continue
         // The `triage` vector should always be empty at this point. 
+        // TODO need to change out linear search
       if(sNG && !dbs.assessed.empty() && (find(dbs.assessed.begin(),dbs.assessed.end(),pid) == dbs.assessed.end()))
         continue;
 
@@ -779,6 +782,8 @@ namespace NWUClustering {
         if(sNG) {
           // Just go ahead and add `pid` to the `assessed` vector
           dbs.assessed.push_back(pid);
+          // Need to keep the `assessed` vector sorted
+          sort(dbs.assessed.begin(), dbs.assessed.end());
           dbs.modify_status_vectors(ne); // update `triage` vector
           // if(rank == 5) cout << "785 [" << rank << "] dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
           while(!dbs.triage.empty()) {
@@ -792,6 +797,8 @@ namespace NWUClustering {
             dbs.triage.erase(dbs.triage.begin());
             // `pid` is supposed to be removed from the `triage` vector, and added to the `assessed` vector
             dbs.assessed.push_back(pid);
+            // Need to keep the `assessed` vector sorted
+            sort(dbs.assessed.begin(), dbs.assessed.end());
             // if(rank == 5) cout << "795 [" << rank << "] pid: " << pid << endl;
             // if(rank == 5) cout << "796 [" << rank << "] post removal dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
             // Attempt to find more points via calling get_neighborhood_points function, given the new centroid point
