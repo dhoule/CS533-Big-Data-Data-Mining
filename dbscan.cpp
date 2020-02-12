@@ -658,10 +658,11 @@ namespace NWUClustering {
   void ClusteringAlgo::modify_status_vectors(kdtree2_result_vector &ne) {
     int ne_size = ne.size();
     int index;
-
+    // TODO need to use actual vector math. A = A AND (B - (B ^ A))
     // loop over `ne`
     for(int i = 0; i < ne_size; i++){
       index = ne[i].idx;
+      // TODO get rid of the linear search
       if((find(triage.begin(),triage.end(),index) == triage.end()) && (find(assessed.begin(),assessed.end(),index) == assessed.end()))
         triage.push_back(index);
     } 
@@ -719,7 +720,7 @@ namespace NWUClustering {
     vector<int>* ind_outer = dbs.m_kdtree_outer->getIndex();
     // Still need this to keep all points available to "the chosen" few. 
       // When changed to use `loopCount` and "random picking" a seg fault occures
-    // setting parents to itself and corresponding proc IDs
+      // setting parents to itself and corresponding proc IDs
     for(i = 0; i < numPts; i++) { 
       pid = (*ind)[i]; 
       dbs.m_parents[pid] = pid; // Elements hold the pointers of the clustering tree
@@ -762,8 +763,8 @@ namespace NWUClustering {
       
       pid = (sNG ? (*ind)[dbs.neededIndices.at(i)] : (*ind)[i]);
       // if the SNG Alg is to be used, but the "seed point" has been seen before, there is no need to continue
-        // TODO Does `triage()` really need to be checked???
-      if(sNG && !dbs.triage.empty() && ((find(dbs.triage.begin(),dbs.triage.end(),pid) == dbs.triage.end()) && (find(dbs.assessed.begin(),dbs.assessed.end(),pid) == dbs.assessed.end())))
+        // The `triage` vector should always be empty at this point. 
+      if(sNG && !dbs.assessed.empty() && (find(dbs.assessed.begin(),dbs.assessed.end(),pid) == dbs.assessed.end()))
         continue;
 
       ne.clear();
@@ -826,8 +827,8 @@ namespace NWUClustering {
     local_count = 0;
 
     // performing additional compression for the local points that are being sent 
-    // this steps identifies the points that actually going to connect the trees in other processors
-    // this step will eventually helps further compression before the actual communication happens
+      // this steps identifies the points that actually going to connect the trees in other processors
+      // this step will eventually helps further compression before the actual communication happens
     for(tid = 0; tid < nproc; tid++) {
       triples = (*p_cur_insert)[tid].size()/2;
       local_count += triples;
