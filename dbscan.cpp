@@ -1107,28 +1107,13 @@ namespace NWUClustering {
     dbs.m_corepoint[pid] = 1;
     dbs.m_member[pid] = 1;
     
-    // traverse the remote neighbors and add in the communication buffers  
-    if(sNG) {
-      // The SNG is being used
-      for(j = 0; j < ne_outer_size; j++) {
-        npid = ne_outer[j].idx; 
-        // TODO This needs to change completely. It is ubsurdly inefficient!!!
-        // If `npid` has been seen before, just move to the next iteration
-        if(find(dbs.assessed_outer.begin(),dbs.assessed_outer.end(),npid) != dbs.assessed_outer.end())
-          continue;
-
-        int outer_parentIds = dbs.m_pts_outer->m_prIDs[npid]; 
-        (*p_cur_insert)[outer_parentIds].push_back(pid);
-        (*p_cur_insert)[outer_parentIds].push_back(dbs.m_pts_outer->m_ind[npid]); 
-      }
-    } else {
-      for(j = 0; j < ne_outer_size; j++) {
-        npid = ne_outer[j].idx; 
-        int outer_parentIds = dbs.m_pts_outer->m_prIDs[npid]; 
-        (*p_cur_insert)[outer_parentIds].push_back(pid);
-        (*p_cur_insert)[outer_parentIds].push_back(dbs.m_pts_outer->m_ind[npid]); 
-      }
+    for(j = 0; j < ne_outer_size; j++) {
+      npid = ne_outer[j].idx; 
+      int outer_parentIds = dbs.m_pts_outer->m_prIDs[npid]; 
+      (*p_cur_insert)[outer_parentIds].push_back(pid);
+      (*p_cur_insert)[outer_parentIds].push_back(dbs.m_pts_outer->m_ind[npid]); 
     }
+
     
     //traverse the local neighbors and perform union operation
     for (j = 0; j < ne_size; j++) {
