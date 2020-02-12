@@ -655,16 +655,10 @@ namespace NWUClustering {
     }
   }
 
-  void ClusteringAlgo::modify_status_vectors(kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer) {
+  void ClusteringAlgo::modify_status_vectors(kdtree2_result_vector &ne) {
     int ne_size = ne.size();
-    int ne_outer_size = ne_outer.size();
     int index;
-    // loop over `ne_outer` as it should be shorter than `ne`
-    for(int i = 0; i < ne_outer_size; i++){
-      index = ne_outer[i].idx;
-      if(find(assessed_outer.begin(),assessed_outer.end(),index) == assessed_outer.end())
-        assessed_outer.push_back(index);
-    }
+
     // loop over `ne`
     for(int i = 0; i < ne_size; i++){
       index = ne[i].idx;
@@ -784,7 +778,7 @@ namespace NWUClustering {
         if(sNG) {
           // Just go ahead and add `pid` to the `assessed` vector
           dbs.assessed.push_back(pid);
-          dbs.modify_status_vectors(ne, ne_outer); // update `triage` & `assessed_outer` vectors
+          dbs.modify_status_vectors(ne); // update `triage` vector
           // if(rank == 5) cout << "785 [" << rank << "] dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
           while(!dbs.triage.empty()) {
             unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
@@ -804,7 +798,7 @@ namespace NWUClustering {
             ne_outer_size = ne_outer.size(); 
             ne_size = ne.size(); 
             if(ne_size + ne_outer_size >= dbs.m_minPts) {
-              dbs.modify_status_vectors(ne, ne_outer); // update `triage` & `assessed_outer` vectors
+              dbs.modify_status_vectors(ne); // update `triage` vector
             } 
           }
         } else {

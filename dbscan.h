@@ -45,8 +45,8 @@ namespace NWUClustering {
 
     void getSeeds();
 
-    // Modifies the  `triage` and `assessed_outer` vectors to determine if a point has been seen before or not
-    void modify_status_vectors(kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer);
+    // Modifies the  `triage` vector to determine if a point has been seen before or not
+    void modify_status_vectors(kdtree2_result_vector &ne);
 
   public:
     
@@ -66,7 +66,6 @@ namespace NWUClustering {
 
     vector <int> triage; // local points that have been found. Deals with `ne` vector.
     vector <int> assessed; // local points that have been checked as centroids.
-    vector <int> assessed_outer; // outer points that have been found. Deals with `ne_outer` vector.
   };  
 
   void run_dbscan_algo_uf_mpi_interleaved(ClusteringAlgo& dbs); // union find dbscan algorithm using mpi with interleaved communication
