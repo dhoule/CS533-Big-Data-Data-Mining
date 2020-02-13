@@ -767,7 +767,7 @@ namespace NWUClustering {
       // if the SNG Alg is to be used, but the "seed point" has been seen before, there is no need to continue
         // The `triage` vector should always be empty at this point. 
         // TODO need to change out linear search
-      if(sNG && !dbs.assessed.empty() && (find(dbs.assessed.begin(),dbs.assessed.end(),pid) == dbs.assessed.end()))
+      if(sNG && !dbs.assessed.empty() && (find(dbs.assessed.begin(),dbs.assessed.end(),pid) != dbs.assessed.end()))
         continue;
 
       ne.clear();
