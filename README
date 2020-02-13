@@ -1,3 +1,8 @@
+Link to paper:
+  http://users.ece.northwestern.edu/~choudhar/Publications/ANewScalableParallelDBSCANAlgorithmUsingDisjointSetDataStructure.pdf 
+To download the original, buggy code:
+  http://cucis.ece.northwestern.edu/projects/Clustering/download_code_dbscan.html
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*   Files: mpi_main.cpp clusters.cpp  clusters.h utils.h utils.cpp          */
 /*   			dbscan.cpp dbscan.h kdtree2.cpp kdtree2.hpp          */
