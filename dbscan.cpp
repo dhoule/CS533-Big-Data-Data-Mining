@@ -657,39 +657,15 @@ namespace NWUClustering {
 
   void ClusteringAlgo::modify_status_vectors(kdtree2_result_vector &ne) {
     int ne_size = ne.size();
-    vector<int> ne_indexes;
-    vector<int> abIntersection; // (B-A)
-    vector<int> abbDifference; // (B-(B-A))
-
-    for(int i = 0; i < ne_size; i++) { ne_indexes.push_back(ne[i].idx); }
-    // Have to make sure the vectors are sorted first
-    sort(ne_indexes.begin(), ne_indexes.end());
-
-    if(!triage.empty()) {
-      sort(triage.begin(), triage.end());
-      // O(2·(m+n-1)) 
-      set_intersection(triage.begin(), triage.end(),
-                      ne_indexes.begin(), ne_indexes.end(),
-                      back_inserter(abIntersection));
-      // O(2·(m+n-1))
-      set_difference(ne_indexes.begin(), ne_indexes.end(),
-                      abIntersection.begin(), abIntersection.end(),
-                      back_inserter(abbDifference));
-      int diffSize = abbDifference.size();
-      // O(mlog2(n)+2) 
-      for(int i = 0; i < diffSize; i++) {
-        // If the index is NOT found in the difference, add it to the `triage` vector
-        if(!binary_search(assessed.begin(),assessed.end(),abbDifference[i]))
-          triage.push_back(abbDifference[i]);
-      }
-    } else {
-      // O(mlog2(n)+2) 
-      for(int i = 0; i < ne_size; i++) {
-        // If the index is NOT found in the difference, add it to the `triage` vector
-        if(!binary_search(assessed.begin(),assessed.end(),ne_indexes[i]))
-          triage.push_back(ne_indexes[i]);
-      }
-    }
+    int index;
+    // TODO need to use actual vector math. A = A AND (B - (B ^ A))
+    // loop over `ne`
+    for(int i = 0; i < ne_size; i++){
+      index = ne[i].idx;
+      // TODO get rid of the linear search
+      if((find(triage.begin(),triage.end(),index) == triage.end()) && (find(assessed.begin(),assessed.end(),index) == assessed.end()))
+        triage.push_back(index);
+    } 
     // `triage` needs to be sorted
     sort(triage.begin(), triage.end());
   }
