@@ -658,12 +658,14 @@ namespace NWUClustering {
   void ClusteringAlgo::modify_status_vectors(kdtree2_result_vector &ne) {
     int ne_size = ne.size();
     int index;
+    // Need to keep the `assessed` vector sorted
+    sort(assessed.begin(), assessed.end()); 
     // TODO need to use actual vector math. A = A AND (B - (B ^ A))
     // loop over `ne`
     for(int i = 0; i < ne_size; i++){
       index = ne[i].idx;
-      // TODO get rid of the linear search
-      if((find(triage.begin(),triage.end(),index) == triage.end()) && (find(assessed.begin(),assessed.end(),index) == assessed.end()))
+      // Make sure the index hasn't been found in any vector
+      if((find(triage.begin(),triage.end(),index) == triage.end()) && (!binary_search(assessed.begin(),assessed.end(),index)))
         triage.push_back(index);
     } 
     // `triage` needs to be sorted
@@ -766,8 +768,7 @@ namespace NWUClustering {
       pid = (sNG ? (*ind)[dbs.neededIndices.at(i)] : (*ind)[i]);
       // if the SNG Alg is to be used, but the "seed point" has been seen before, there is no need to continue
         // The `triage` vector should always be empty at this point. 
-        // TODO need to change out linear search
-      if(sNG && !dbs.assessed.empty() && (find(dbs.assessed.begin(),dbs.assessed.end(),pid) != dbs.assessed.end()))
+      if(sNG && !dbs.assessed.empty() && (binary_search(dbs.assessed.begin(),dbs.assessed.end(),pid)))
         continue;
 
       ne.clear();
@@ -782,8 +783,7 @@ namespace NWUClustering {
         if(sNG) {
           // Just go ahead and add `pid` to the `assessed` vector
           dbs.assessed.push_back(pid);
-          // Need to keep the `assessed` vector sorted
-          sort(dbs.assessed.begin(), dbs.assessed.end());
+          
           dbs.modify_status_vectors(ne); // update `triage` vector
           // if(rank == 5) cout << "785 [" << rank << "] dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
           while(!dbs.triage.empty()) {
@@ -797,8 +797,7 @@ namespace NWUClustering {
             dbs.triage.erase(dbs.triage.begin());
             // `pid` is supposed to be removed from the `triage` vector, and added to the `assessed` vector
             dbs.assessed.push_back(pid);
-            // Need to keep the `assessed` vector sorted
-            sort(dbs.assessed.begin(), dbs.assessed.end());
+            
             // if(rank == 5) cout << "795 [" << rank << "] pid: " << pid << endl;
             // if(rank == 5) cout << "796 [" << rank << "] post removal dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
             // Attempt to find more points via calling get_neighborhood_points function, given the new centroid point
@@ -809,6 +808,8 @@ namespace NWUClustering {
               dbs.modify_status_vectors(ne); // update `triage` vector
             } 
           }
+          // Need to keep the `assessed` vector sorted. This is a catch-all
+          sort(dbs.assessed.begin(), dbs.assessed.end()); 
         } else {
           unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
         }
