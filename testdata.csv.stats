@@ -1,0 +1,13 @@
+Num of data points: 2000
+Num of attributes : 3
+Number of cluster : 8
+Number of Uniformly generated points : -1000
+Cluster Centres Info : 
+Cluster[0] [903] 0 0 0 
+Cluster[1] [-115] 30.2901 -9.55202 -29.5093 
+Cluster[2] [384] -3.19354 50.466 -40.8898 
+Cluster[3] [-408] 46.8629 -60.9342 -77.4401 
+Cluster[4] [-356] -1.08898 15.9702 -69.9451 
+Cluster[5] [490] -36.6002 16.2532 -9.57321 
+Cluster[6] [1016] -17.9153 21.1464 8.38914 
+Cluster[7] [1086] -77.8026 39.2295 -8.8438 
