@@ -1057,13 +1057,13 @@ namespace NWUClustering {
   // called in `run_dbscan_algo_uf_mpi_interleaved` function.
     // Attempts to find local and remote points within the given range; eps; of the indexed point; `pid`.
   void get_neighborhood_points(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid) {
-    
+    int dims = dbs.m_pts->m_i_dims;
     // getting the local neighborhoods of local point
     dbs.m_kdtree->r_nearest_around_point(pid, 0, dbs.m_epsSquare, ne);
     
-    vector<float> qv(dbs.m_pts->m_i_dims);
+    vector<float> qv(dims);
     // `qv` stands for Query Vector. It is a vector of the current point's dimensions/attributes.
-    for (int u = 0; u < dbs.m_pts->m_i_dims; u++) {
+    for (int u = 0; u < dims; u++) {
       qv[u] = dbs.m_kdtree->the_data[pid][u];
     }
 
