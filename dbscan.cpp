@@ -636,23 +636,20 @@ namespace NWUClustering {
     option, if given.
   */
   void ClusteringAlgo::getSeeds() {
-    // only need to do something if `m_perc_of_dataset` != 1.0
-    if(1.0 != m_perc_of_dataset) {
-      int temp, i = 0, totsPts = m_pts->m_i_num_points;
-      int numPts = totsPts * m_perc_of_dataset;
-      // Use current time as seed for random generator 
-      srand(time(NULL));
-      // Reserve enough memory for the needed elements
-      neededIndices.reserve(numPts);
-      while(i < numPts) {
-        temp = rand() % totsPts;
-        if(find(neededIndices.begin(), neededIndices.end(), temp) == neededIndices.end()) {
-          neededIndices.push_back(temp);
-          i++;
-        }
+    int temp, i = 0, totsPts = m_pts->m_i_num_points;
+    int numPts = totsPts * m_perc_of_dataset;
+    // Use current time as seed for random generator 
+    srand(time(NULL));
+    // Reserve enough memory for the needed elements
+    neededIndices.reserve(numPts);
+    while(i < numPts) {
+      temp = rand() % totsPts;
+      if(find(neededIndices.begin(), neededIndices.end(), temp) == neededIndices.end()) {
+        neededIndices.push_back(temp);
+        i++;
       }
-      sort(neededIndices.begin(), neededIndices.end());
     }
+    sort(neededIndices.begin(), neededIndices.end());
   }
 
   void ClusteringAlgo::modify_status_vectors(kdtree2_result_vector &ne) {
@@ -765,10 +762,10 @@ namespace NWUClustering {
     start = MPI_Wtime();
     for(i = 0; i < loopCount; i++) { 
       
-      pid = (sNG ? (*ind)[dbs.neededIndices.at(i)] : (*ind)[i]);
+      pid = (*ind)[dbs.neededIndices.at(i)];
       // if the SNG Alg is to be used, but the "seed point" has been seen before, there is no need to continue
         // The `triage` vector should always be empty at this point. 
-      if(sNG && !dbs.assessed.empty() && (binary_search(dbs.assessed.begin(),dbs.assessed.end(),pid)))
+      if(!dbs.assessed.empty() && (binary_search(dbs.assessed.begin(),dbs.assessed.end(),pid)))
         continue;
 
       ne.clear();
@@ -779,40 +776,36 @@ namespace NWUClustering {
       int ne_size = ne.size(); 
       if(ne_size + ne_outer_size >= dbs.m_minPts) {
         // if(rank == 5) cout << "\n----------------------------------\n778 [" << rank << "] pid: " << pid << endl;
-        // The status vectors are only needed when the SNG Alg is being used
-        if(sNG) {
-          // Just go ahead and add `pid` to the `assessed` vector
+
+        // Just go ahead and add `pid` to the `assessed` vector
+        dbs.assessed.push_back(pid);
+        
+        dbs.modify_status_vectors(ne); // update `triage` vector
+        // if(rank == 5) cout << "785 [" << rank << "] dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
+        while(!dbs.triage.empty()) {
+          unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
+          // Clear `ne` & `ne_outer` vectors
+          ne.clear();
+          ne_outer.clear();
+          // Pop the first element of `triage` off the front, and store in local variable `pid`
+          pid = dbs.triage.front();
+          // if(rank == 5) cout << "793 [" << rank << "] pre removal dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
+          dbs.triage.erase(dbs.triage.begin());
+          // `pid` is supposed to be removed from the `triage` vector, and added to the `assessed` vector
           dbs.assessed.push_back(pid);
           
-          dbs.modify_status_vectors(ne); // update `triage` vector
-          // if(rank == 5) cout << "785 [" << rank << "] dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
-          while(!dbs.triage.empty()) {
-            unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
-            // Clear `ne` & `ne_outer` vectors
-            ne.clear();
-            ne_outer.clear();
-            // Pop the first element of `triage` off the front, and store in local variable `pid`
-            pid = dbs.triage.front();
-            // if(rank == 5) cout << "793 [" << rank << "] pre removal dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
-            dbs.triage.erase(dbs.triage.begin());
-            // `pid` is supposed to be removed from the `triage` vector, and added to the `assessed` vector
-            dbs.assessed.push_back(pid);
-            
-            // if(rank == 5) cout << "795 [" << rank << "] pid: " << pid << endl;
-            // if(rank == 5) cout << "796 [" << rank << "] post removal dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
-            // Attempt to find more points via calling get_neighborhood_points function, given the new centroid point
-            get_neighborhood_points(dbs, ne, ne_outer, pid);
-            ne_outer_size = ne_outer.size(); 
-            ne_size = ne.size(); 
-            if(ne_size + ne_outer_size >= dbs.m_minPts) {
-              dbs.modify_status_vectors(ne); // update `triage` vector
-            } 
-          }
-          // Need to keep the `assessed` vector sorted. This is a catch-all
-          sort(dbs.assessed.begin(), dbs.assessed.end()); 
-        } else {
-          unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
+          // if(rank == 5) cout << "795 [" << rank << "] pid: " << pid << endl;
+          // if(rank == 5) cout << "796 [" << rank << "] post removal dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
+          // Attempt to find more points via calling get_neighborhood_points function, given the new centroid point
+          get_neighborhood_points(dbs, ne, ne_outer, pid);
+          ne_outer_size = ne_outer.size(); 
+          ne_size = ne.size(); 
+          if(ne_size + ne_outer_size >= dbs.m_minPts) {
+            dbs.modify_status_vectors(ne); // update `triage` vector
+          } 
         }
+        // Need to keep the `assessed` vector sorted. This is a catch-all
+        sort(dbs.assessed.begin(), dbs.assessed.end()); 
       }
     }
       
@@ -1099,11 +1092,6 @@ namespace NWUClustering {
     int j;
     int ne_size = ne.size();
     int ne_outer_size = ne_outer.size();
-    bool sNG = (1.0 == dbs.m_perc_of_dataset ? false : true ); // determine if the SNG Alg is being used
-    // TODO delete after testing
-    int rank, nproc;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
     // pid is a core point
     root = pid;
