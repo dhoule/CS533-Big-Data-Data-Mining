@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
   // declaring the ClusteringAlgo object 'dbs'
   NWUClustering::ClusteringAlgo dbs;
   // initialize some paramaters
-  dbs.set_dbscan_params(eps, minPts, seed_percentage); // TODO need to modify this for SNG Alg
+  dbs.set_dbscan_params(eps, minPts, seed_percentage); 
 
   if(rank == proc_of_interest) cout << "Epsilon: " << eps << " MinPts: " << minPts << " Percent_of_dataset_used: " << seed_percentage << endl;
   // Make ALL of the nodes/processes wait till they ALL get to this point
@@ -160,7 +160,7 @@ int main(int argc, char** argv) {
   start = MPI_Wtime();
   dbs.build_kdtree();
   dbs.build_kdtree_outer();
-  // TODO call GetSeeds() from here
+  
   dbs.getSeeds();
   MPI_Barrier(MPI_COMM_WORLD);
   // if(rank == proc_of_interest) cout << "Build kdtree took " << MPI_Wtime() - start << " seconds [pre_processing]\n" << endl;
