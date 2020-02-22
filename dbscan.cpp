@@ -678,8 +678,7 @@ namespace NWUClustering {
     double start = MPI_Wtime();     
     int i, pid, j, k, npid;
     int rank, nproc;
-    bool sNG = (1.0 == dbs.m_perc_of_dataset ? false : true );
-    int loopCount = (sNG ? dbs.neededIndices.size() : numPts);
+    int loopCount = dbs.neededIndices.size();
 
     kdtree2_result_vector ne;
     kdtree2_result_vector ne_outer;
