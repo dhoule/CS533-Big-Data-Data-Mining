@@ -7,9 +7,9 @@ import struct
   # 4) The number of attributes/dimensions, for each point, is the second number; M
   # 5) The numbers that follow must be the amount of N*M
 
-inputFile = "./particles_0_256_ascii" # change this to the file you want to convert
+inputFile = "./testdata.txt" # change this to the file you want to convert
 # inputFile = "./part64.bin" # change this to the file you want to convert
-outPutFile = './part256.bin' # Change this to wht you want the output to be named
+outPutFile = './testdata.bin' # Change this to wht you want the output to be named
 
 with open(inputFile, mode='rb') as file:
   # fileContent = file.read()

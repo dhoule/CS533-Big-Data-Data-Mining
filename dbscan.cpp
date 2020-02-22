@@ -636,23 +636,37 @@ namespace NWUClustering {
     option, if given.
   */
   void ClusteringAlgo::getSeeds() {
-    // only need to do something if `m_perc_of_dataset` != 1.0
-    if(1.0 != m_perc_of_dataset) {
-      int temp, i = 0, totsPts = m_pts->m_i_num_points;
-      int numPts = totsPts * m_perc_of_dataset;
-      // Use current time as seed for random generator 
-      srand(time(NULL));
-      // Reserve enough memory for the needed elements
-      neededIndices.reserve(numPts);
-      while(i < numPts) {
-        temp = rand() % totsPts;
-        if(find(neededIndices.begin(), neededIndices.end(), temp) == neededIndices.end()) {
-          neededIndices.push_back(temp);
-          i++;
-        }
+    int temp, i = 0, totsPts = m_pts->m_i_num_points;
+    int numPts = totsPts * m_perc_of_dataset;
+    // Use current time as seed for random generator 
+    srand(time(NULL));
+    // Reserve enough memory for the needed elements
+    neededIndices.reserve(numPts);
+    while(i < numPts) {
+      temp = rand() % totsPts;
+      if(find(neededIndices.begin(), neededIndices.end(), temp) == neededIndices.end()) {
+        neededIndices.push_back(temp);
+        i++;
       }
-      sort(neededIndices.begin(), neededIndices.end());
     }
+    sort(neededIndices.begin(), neededIndices.end());
+  }
+
+  void ClusteringAlgo::modify_status_vectors(kdtree2_result_vector &ne) {
+    int ne_size = ne.size();
+    int index;
+    // Need to keep the `assessed` vector sorted
+    sort(assessed.begin(), assessed.end()); 
+    // TODO need to use actual vector math. A = A AND (B - (B ^ A))
+    // loop over `ne`
+    for(int i = 0; i < ne_size; i++){
+      index = ne[i].idx;
+      // Make sure the index hasn't been found in any vector
+      if((find(triage.begin(),triage.end(),index) == triage.end()) && (!binary_search(assessed.begin(),assessed.end(),index)))
+        triage.push_back(index);
+    } 
+    // `triage` needs to be sorted
+    sort(triage.begin(), triage.end());
   }
 
   // "uf" == "Union Find"
@@ -664,8 +678,7 @@ namespace NWUClustering {
     double start = MPI_Wtime();     
     int i, pid, j, k, npid;
     int rank, nproc;
-    bool sNG = (1.0 == dbs.m_perc_of_dataset ? false : true );
-    int loopCount = (sNG ? dbs.neededIndices.size() : numPts);
+    int loopCount = dbs.neededIndices.size();
 
     kdtree2_result_vector ne;
     kdtree2_result_vector ne_outer;
@@ -707,7 +720,7 @@ namespace NWUClustering {
     vector<int>* ind_outer = dbs.m_kdtree_outer->getIndex();
     // Still need this to keep all points available to "the chosen" few. 
       // When changed to use `loopCount` and "random picking" a seg fault occures
-    // setting parents to itself and corresponding proc IDs
+      // setting parents to itself and corresponding proc IDs
     for(i = 0; i < numPts; i++) { 
       pid = (*ind)[i]; 
       dbs.m_parents[pid] = pid; // Elements hold the pointers of the clustering tree
@@ -744,19 +757,54 @@ namespace NWUClustering {
     // if(rank == proc_of_interest) cout << "Init time " << MPI_Wtime() - start << endl; 
 
     MPI_Barrier(MPI_COMM_WORLD);
-    
     // the main part of the DBSCAN algorithm (called local computation)
     start = MPI_Wtime();
     for(i = 0; i < loopCount; i++) { 
+      
+      pid = (*ind)[dbs.neededIndices.at(i)];
+      // if the SNG Alg is to be used, but the "seed point" has been seen before, there is no need to continue
+        // The `triage` vector should always be empty at this point. 
+      if(!dbs.assessed.empty() && (binary_search(dbs.assessed.begin(),dbs.assessed.end(),pid)))
+        continue;
 
-      pid = (sNG ? (*ind)[dbs.neededIndices.at(i)] : (*ind)[i]);
-
+      ne.clear();
+      ne_outer.clear();
       get_neighborhood_points(dbs, ne, ne_outer, pid);
       
       int ne_outer_size = ne_outer.size(); 
       int ne_size = ne.size(); 
       if(ne_size + ne_outer_size >= dbs.m_minPts) {
-        unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
+        // if(rank == 5) cout << "\n----------------------------------\n778 [" << rank << "] pid: " << pid << endl;
+
+        // Just go ahead and add `pid` to the `assessed` vector
+        dbs.assessed.push_back(pid);
+        
+        dbs.modify_status_vectors(ne); // update `triage` vector
+        // if(rank == 5) cout << "785 [" << rank << "] dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
+        while(!dbs.triage.empty()) {
+          unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
+          // Clear `ne` & `ne_outer` vectors
+          ne.clear();
+          ne_outer.clear();
+          // Pop the first element of `triage` off the front, and store in local variable `pid`
+          pid = dbs.triage.front();
+          // if(rank == 5) cout << "793 [" << rank << "] pre removal dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
+          dbs.triage.erase(dbs.triage.begin());
+          // `pid` is supposed to be removed from the `triage` vector, and added to the `assessed` vector
+          dbs.assessed.push_back(pid);
+          
+          // if(rank == 5) cout << "795 [" << rank << "] pid: " << pid << endl;
+          // if(rank == 5) cout << "796 [" << rank << "] post removal dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
+          // Attempt to find more points via calling get_neighborhood_points function, given the new centroid point
+          get_neighborhood_points(dbs, ne, ne_outer, pid);
+          ne_outer_size = ne_outer.size(); 
+          ne_size = ne.size(); 
+          if(ne_size + ne_outer_size >= dbs.m_minPts) {
+            dbs.modify_status_vectors(ne); // update `triage` vector
+          } 
+        }
+        // Need to keep the `assessed` vector sorted. This is a catch-all
+        sort(dbs.assessed.begin(), dbs.assessed.end()); 
       }
     }
       
@@ -779,8 +827,8 @@ namespace NWUClustering {
     local_count = 0;
 
     // performing additional compression for the local points that are being sent 
-    // this steps identifies the points that actually going to connect the trees in other processors
-    // this step will eventually helps further compression before the actual communication happens
+      // this steps identifies the points that actually going to connect the trees in other processors
+      // this step will eventually helps further compression before the actual communication happens
     for(tid = 0; tid < nproc; tid++) {
       triples = (*p_cur_insert)[tid].size()/2;
       local_count += triples;
@@ -1009,15 +1057,13 @@ namespace NWUClustering {
   // called in `run_dbscan_algo_uf_mpi_interleaved` function.
     // Attempts to find local and remote points within the given range; eps; of the indexed point; `pid`.
   void get_neighborhood_points(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid) {
-    
-    ne.clear();
-    ne_outer.clear();
+    int dims = dbs.m_pts->m_i_dims;
     // getting the local neighborhoods of local point
     dbs.m_kdtree->r_nearest_around_point(pid, 0, dbs.m_epsSquare, ne);
     
-    vector<float> qv(dbs.m_pts->m_i_dims);
+    vector<float> qv(dims);
     // `qv` stands for Query Vector. It is a vector of the current point's dimensions/attributes.
-    for (int u = 0; u < dbs.m_pts->m_i_dims; u++) {
+    for (int u = 0; u < dims; u++) {
       qv[u] = dbs.m_kdtree->the_data[pid][u];
     }
 
@@ -1051,13 +1097,13 @@ namespace NWUClustering {
     dbs.m_corepoint[pid] = 1;
     dbs.m_member[pid] = 1;
     
-    // traverse the remote neighbors and add in the communication buffers  
     for(j = 0; j < ne_outer_size; j++) {
       npid = ne_outer[j].idx; 
       int outer_parentIds = dbs.m_pts_outer->m_prIDs[npid]; 
       (*p_cur_insert)[outer_parentIds].push_back(pid);
       (*p_cur_insert)[outer_parentIds].push_back(dbs.m_pts_outer->m_ind[npid]); 
     }
+
     
     //traverse the local neighbors and perform union operation
     for (j = 0; j < ne_size; j++) {
