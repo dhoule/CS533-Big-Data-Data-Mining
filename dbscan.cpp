@@ -770,14 +770,14 @@ namespace NWUClustering {
       ne.clear();
       ne_outer.clear();
       get_neighborhood_points(dbs, ne, ne_outer, pid);
-      
+      // Just go ahead and add `pid` to the `assessed` vector
+      dbs.assessed.push_back(pid);
       int ne_outer_size = ne_outer.size(); 
       int ne_size = ne.size(); 
       if(ne_size + ne_outer_size >= dbs.m_minPts) {
         // if(rank == 5) cout << "\n----------------------------------\n778 [" << rank << "] pid: " << pid << endl;
 
-        // Just go ahead and add `pid` to the `assessed` vector
-        dbs.assessed.push_back(pid);
+        
         
         dbs.modify_status_vectors(ne); // update `triage` vector
         // if(rank == 5) cout << "785 [" << rank << "] dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
