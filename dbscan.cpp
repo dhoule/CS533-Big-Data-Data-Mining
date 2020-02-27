@@ -655,16 +655,30 @@ namespace NWUClustering {
   void ClusteringAlgo::modify_status_vectors(kdtree2_result_vector &ne) {
     int ne_size = ne.size();
     int index;
+    vector <int> ne_indexes;
+    vector <int> abIntersection;
+    // vector <int> triageDifference;
+    vector <int> neDifference;
+    vector <int> assessNeDiff;
+
     // Need to keep the `assessed` vector sorted
     sort(assessed.begin(), assessed.end()); 
+    // Turn `ne` vector into a vector of only the indexes; `ne_indexes`
+    for(int i = 0; i < ne_size; i++) { ne_indexes.push_back(ne[i].idx); }
+    // Needs to be sorted to use the other functions
+    sort(ne_indexes.begin(), ne_indexes.end());
     // TODO need to use actual vector math. A = A AND (B - (B ^ A))
-    // loop over `ne`
-    for(int i = 0; i < ne_size; i++){
-      index = ne[i].idx;
-      // Make sure the index hasn't been found in any vector
-      if((find(triage.begin(),triage.end(),index) == triage.end()) && (!binary_search(assessed.begin(),assessed.end(),index)))
-        triage.push_back(index);
-    } 
+    // `abIntersection` = `triage` OR `ne_indexes`. The elements in both, but not either.
+    set_intersection(triage.begin(),triage.end(),ne_indexes.begin(),ne_indexes.end(),back_inserter(abIntersection));
+    // // `triageDifference` = `triage` - `abIntersection`. Only the elements from `triage`, but not `abIntersection`.
+    // set_difference(triage.begin(),triage.end(),abIntersection.begin(),abIntersection.end(),back_inserter(triageDifference));
+    // `neDifference` = `ne_indexes` - `abIntersection`. Only elements in `ne_indexes`, but not `abIntersection`.
+    set_difference(ne_indexes.begin(),ne_indexes.end(),abIntersection.begin(),abIntersection.end(),back_inserter(neDifference));
+    // `assessNeDiff` = `neDifference` - `assessed`. Removes all elements from `ne_indexes` that are also in `assessed`.
+    set_difference(neDifference.begin(),neDifference.end(),assessed.begin(),assessed.end(),back_inserter(assessNeDiff));
+    int assessNeDiffSize = assessNeDiff.size();
+    // `assessNeDiff` is clean, and the elements can just be added to the back of `triage`.
+    for(int i = 0; i < assessNeDiffSize; i++) { triage.push_back(assessNeDiff[i]); }
     // `triage` needs to be sorted
     sort(triage.begin(), triage.end());
   }
