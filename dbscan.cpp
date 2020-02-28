@@ -674,6 +674,15 @@ namespace NWUClustering {
     // set_difference(triage.begin(),triage.end(),abIntersection.begin(),abIntersection.end(),back_inserter(triageDifference));
     // `neDifference` = `ne_indexes` - `abIntersection`. Only elements in `ne_indexes`, but not `abIntersection`.
     set_difference(ne_indexes.begin(),ne_indexes.end(),abIntersection.begin(),abIntersection.end(),back_inserter(neDifference));
+    // Clear out `triage` to assign it new values
+    // triage.clear();
+    // Copies the values of `triageDifference` into `triage`. `triageDifference` are indexes that aren't in other neighborehoods.
+    // copy(triageDifference.begin(),triageDifference.end(),back_inserter(triage));
+    int abIntSize = abIntersection.size();
+    // ` abIntersection` consists of elements that exist in other neighborhoods, so they're closre to the starting seed point.
+    // for(int i = 0; i < abIntSize; i++) { assessed.push_back(abIntersection[i]); }
+    // Because of the addition to the vector, it needs to be sorted
+    // sort(assessed.begin(), assessed.end());
     // `assessNeDiff` = `neDifference` - `assessed`. Removes all elements from `ne_indexes` that are also in `assessed`.
     set_difference(neDifference.begin(),neDifference.end(),assessed.begin(),assessed.end(),back_inserter(assessNeDiff));
     int assessNeDiffSize = assessNeDiff.size();
@@ -791,12 +800,11 @@ namespace NWUClustering {
       if(ne_size + ne_outer_size >= dbs.m_minPts) {
         // if(rank == 5) cout << "\n----------------------------------\n778 [" << rank << "] pid: " << pid << endl;
 
-        
-        
         dbs.modify_status_vectors(ne); // update `triage` vector
+        unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
         // if(rank == 5) cout << "785 [" << rank << "] dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
         while(!dbs.triage.empty()) {
-          unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
+          
           // Clear `ne` & `ne_outer` vectors
           ne.clear();
           ne_outer.clear();
@@ -815,6 +823,7 @@ namespace NWUClustering {
           ne_size = ne.size(); 
           if(ne_size + ne_outer_size >= dbs.m_minPts) {
             dbs.modify_status_vectors(ne); // update `triage` vector
+            unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
           } 
         }
         // Need to keep the `assessed` vector sorted. This is a catch-all
