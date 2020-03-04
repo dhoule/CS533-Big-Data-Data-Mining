@@ -652,14 +652,18 @@ namespace NWUClustering {
     sort(neededIndices.begin(), neededIndices.end());
   }
 
-  void ClusteringAlgo::modify_status_vectors(kdtree2_result_vector &ne) {
+  void ClusteringAlgo::modify_status_vectors(int pid, kdtree2_result_vector &ne) {
     int ne_size = ne.size();
     int index;
     vector <int> ne_indexes;
     vector <int> abIntersection;
-    // vector <int> triageDifference;
+    vector <int> triageDifference;
     vector <int> neDifference;
     vector <int> assessNeDiff;
+    kdtree2_result_vector newNe;
+    int rank, nproc;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
     // Need to keep the `assessed` vector sorted
     sort(assessed.begin(), assessed.end()); 
@@ -667,29 +671,94 @@ namespace NWUClustering {
     for(int i = 0; i < ne_size; i++) { ne_indexes.push_back(ne[i].idx); }
     // Needs to be sorted to use the other functions
     sort(ne_indexes.begin(), ne_indexes.end());
+    // if(rank == 5) {
+    //   cout << "\n\npid " << pid << endl;
+    //   cout << "\n\nne\n";
+    //   for(int i = 0; i < ne_size; i++) {
+    //     cout << ne_indexes[i] << ", ";
+    //   }
+    //   cout << "\n\ntriage\n";
+    //   for(int i = 0; i < triage.size(); i++) {
+    //     cout << triage[i] << ", ";
+    //   }
+    //   cout << "\n\nassessed\n";
+    //   for(int i = 0; i < assessed.size(); i++) {
+    //     cout << assessed[i] << ", ";
+    //   }
+    // }
     // TODO need to use actual vector math. A = A AND (B - (B ^ A))
     // `abIntersection` = `triage` OR `ne_indexes`. The elements in both, but not either.
     set_intersection(triage.begin(),triage.end(),ne_indexes.begin(),ne_indexes.end(),back_inserter(abIntersection));
+    // if(rank == 5) {
+    //   cout << "\n\nabIntersection = triage OR ne\n";
+    //   for(int i = 0; i < abIntersection.size(); i++) {
+    //     cout << abIntersection[i] << ", ";
+    //   }
+    // }
     // // `triageDifference` = `triage` - `abIntersection`. Only the elements from `triage`, but not `abIntersection`.
-    // set_difference(triage.begin(),triage.end(),abIntersection.begin(),abIntersection.end(),back_inserter(triageDifference));
+    set_difference(triage.begin(),triage.end(),abIntersection.begin(),abIntersection.end(),back_inserter(triageDifference));
+    // if(rank == 5) {
+    //   cout << "\n\ntriageDifference = triage - abIntersection\n";
+    //   for(int i = 0; i < triageDifference.size(); i++) {
+    //     cout << triageDifference[i] << ", ";
+    //   }
+    // }
     // `neDifference` = `ne_indexes` - `abIntersection`. Only elements in `ne_indexes`, but not `abIntersection`.
     set_difference(ne_indexes.begin(),ne_indexes.end(),abIntersection.begin(),abIntersection.end(),back_inserter(neDifference));
+    // if(rank == 5) {
+    //   cout << "\n\nneDifference = ne - abIntersection\n";
+    //   for(int i = 0; i < neDifference.size(); i++) {
+    //     cout << neDifference[i] << ", ";
+    //   }
+    // }
     // Clear out `triage` to assign it new values
-    // triage.clear();
+    triage.clear();
     // Copies the values of `triageDifference` into `triage`. `triageDifference` are indexes that aren't in other neighborehoods.
-    // copy(triageDifference.begin(),triageDifference.end(),back_inserter(triage));
+    copy(triageDifference.begin(),triageDifference.end(),back_inserter(triage));
     int abIntSize = abIntersection.size();
     // ` abIntersection` consists of elements that exist in other neighborhoods, so they're closre to the starting seed point.
-    // for(int i = 0; i < abIntSize; i++) { assessed.push_back(abIntersection[i]); }
+    for(int i = 0; i < abIntSize; i++) { assessed.push_back(abIntersection[i]); }
     // Because of the addition to the vector, it needs to be sorted
-    // sort(assessed.begin(), assessed.end());
+    sort(assessed.begin(), assessed.end());
+    // if(rank == 5) {
+    //   cout << "\n\nnew assessed = assessed UNION abIntersection\n";
+    //   for(int i = 0; i < assessed.size(); i++) {
+    //     cout << assessed[i] << ", ";
+    //   }
+    // }
     // `assessNeDiff` = `neDifference` - `assessed`. Removes all elements from `ne_indexes` that are also in `assessed`.
     set_difference(neDifference.begin(),neDifference.end(),assessed.begin(),assessed.end(),back_inserter(assessNeDiff));
     int assessNeDiffSize = assessNeDiff.size();
+    // if(rank == 5) {
+    //   cout << "\n\nassessNeDiff = neDifference - assessed\n";
+    //   for(int i = 0; i < assessNeDiff.size(); i++) {
+    //     cout << assessNeDiff[i] << ", ";
+    //   }
+    // }
+    // need to build the `newNe` vector
+    for(int i = 0; i < ne_size; i++) {
+      index = ne[i].idx;
+      if(binary_search(assessNeDiff.begin(),assessNeDiff.end(),index)){
+        newNe.push_back(ne[i]);
+      }
+      if(index == pid){
+        newNe.push_back(ne[i]);
+      }
+    }
+    ne.clear();
+    copy(newNe.begin(),newNe.end(),back_inserter(ne));
     // `assessNeDiff` is clean, and the elements can just be added to the back of `triage`.
     for(int i = 0; i < assessNeDiffSize; i++) { triage.push_back(assessNeDiff[i]); }
     // `triage` needs to be sorted
     sort(triage.begin(), triage.end());
+    // if(rank == 5) {
+    //   cout << "\n\nnew triage = triageDifference UNION assessNeDiff\n";
+    //   for(int i = 0; i < triage.size(); i++) {
+    //     cout << triage[i] << ", ";
+    //   }
+    //   cout << "\n-----------------------------\n" << endl;
+    // }
+
   }
 
   // "uf" == "Union Find"
@@ -799,8 +868,9 @@ namespace NWUClustering {
       int ne_size = ne.size(); 
       if(ne_size + ne_outer_size >= dbs.m_minPts) {
         // if(rank == 5) cout << "\n----------------------------------\n778 [" << rank << "] pid: " << pid << endl;
+        // if(rank == 5) cout << "\n----------------------------------\n778 Start" << endl;
 
-        dbs.modify_status_vectors(ne); // update `triage` vector
+        dbs.modify_status_vectors(pid, ne); // update `triage` vector
         unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
         // if(rank == 5) cout << "785 [" << rank << "] dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
         while(!dbs.triage.empty()) {
@@ -822,7 +892,12 @@ namespace NWUClustering {
           ne_outer_size = ne_outer.size(); 
           ne_size = ne.size(); 
           if(ne_size + ne_outer_size >= dbs.m_minPts) {
-            dbs.modify_status_vectors(ne); // update `triage` vector
+            dbs.modify_status_vectors(pid, ne); // update `triage` vector
+            // if(rank == 5) {
+            //   cout << "\n\nnew ne after modify_status_vectors()\n";
+            //   for(int i = 0; i < ne.size(); i++) { cout << ne[i].idx << ", "; }
+            //   cout << "\nCalling unionize_neighborhood()\n" << endl;
+            // }
             unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
           } 
         }
