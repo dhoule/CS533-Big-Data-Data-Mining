@@ -46,7 +46,7 @@ namespace NWUClustering {
     void getSeeds();
 
     // Modifies the  `triage` vector to determine if a point has been seen before or not
-    void modify_status_vectors(int pid, kdtree2_result_vector &ne);
+    void modify_status_vectors(int pid, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer);
 
   public:
     
@@ -65,7 +65,8 @@ namespace NWUClustering {
     vector <int> neededIndices; // Values are indices of points to be used, instead of the entire set. If `m_perc_of_dataset` == 1.0, it will be empty.
 
     vector <int> triage; // local points that have been found. Deals with `ne` vector.
-    vector <int> assessed; // local points that have been checked as centroids.
+    vector <int> assessed; // local points that have been checked as centroids, or have been found in the intersection of 2/+ neighborhoods.
+    vector <int> assessed_outer; // remote points that have been seen already. Deals with the `ne_outer` vector.
   };  
 
   void run_dbscan_algo_uf_mpi_interleaved(ClusteringAlgo& dbs); // union find dbscan algorithm using mpi with interleaved communication
