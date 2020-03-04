@@ -652,8 +652,9 @@ namespace NWUClustering {
     sort(neededIndices.begin(), neededIndices.end());
   }
 
-  void ClusteringAlgo::modify_status_vectors(int pid, kdtree2_result_vector &ne) {
+  void ClusteringAlgo::modify_status_vectors(int pid, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer) {
     int ne_size = ne.size();
+    int ne_outer_size = ne_outer.size();
     int index;
     vector <int> ne_indexes;
     vector <int> abIntersection;
@@ -661,10 +662,51 @@ namespace NWUClustering {
     vector <int> neDifference;
     vector <int> assessNeDiff;
     kdtree2_result_vector newNe;
+    kdtree2_result_vector newNeOuter;
     int rank, nproc;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+    
+    // only need to deal with the remote points if there actually are some
+    if(!ne_outer.empty()) {
+      if(rank == 5){
+        cout << "\n\npid " << pid << endl;
+        cout << "\n\npre-remote points\n";
+        for(int i = 0; i < ne_outer_size; i++) {
+          cout << ne_outer[i].idx << ", ";
+        }
+      }
+      if(assessed_outer.empty()) {
+        // Just copy the `ne_outer` indexes to it
+        for(int i = 0; i < ne_outer_size; i++) { assessed_outer.push_back(ne_outer[i].idx); }
 
+      } else {
+        // Need to determine what remote points have been seen before
+        vector <int> tempHold;
+        for(int i = 0; i < ne_outer_size; i++) {
+          index = ne_outer[i].idx;
+          if(!binary_search(assessed_outer.begin(),assessed_outer.end(),index)){
+            tempHold.push_back(index);
+            newNeOuter.push_back(ne_outer[i]);
+          }
+        }
+        for(int i = 0; i < tempHold.size(); i++) { assessed_outer.push_back(tempHold[i]); }
+        ne_outer.clear();
+        copy(newNeOuter.begin(),newNeOuter.end(),back_inserter(ne_outer));
+      }
+      sort(assessed_outer.begin(), assessed_outer.end());
+      if(rank == 5){
+        cout << "\n\npost-remote points\n";
+        for(int i = 0; i < ne_outer.size(); i++) {
+          cout << ne_outer[i].idx << ", ";
+        }
+        cout << "\n\nassessed_outer\n";
+        for(int i = 0; i < assessed_outer.size(); i++) {
+          cout << assessed_outer[i] << ", ";
+        }
+        cout << "\n---------------------------------------------\n\n";
+      }
+    }
     // Need to keep the `assessed` vector sorted
     sort(assessed.begin(), assessed.end()); 
     // Turn `ne` vector into a vector of only the indexes; `ne_indexes`
@@ -868,9 +910,9 @@ namespace NWUClustering {
       int ne_size = ne.size(); 
       if(ne_size + ne_outer_size >= dbs.m_minPts) {
         // if(rank == 5) cout << "\n----------------------------------\n778 [" << rank << "] pid: " << pid << endl;
-        // if(rank == 5) cout << "\n----------------------------------\n778 Start" << endl;
+        if(rank == 5) cout << "\n----------------------------------\n778 Start" << endl;
 
-        dbs.modify_status_vectors(pid, ne); // update `triage` vector
+        dbs.modify_status_vectors(pid, ne, ne_outer); // update `triage` vector
         unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
         // if(rank == 5) cout << "785 [" << rank << "] dbs.triage.size(): " << dbs.triage.size() << "\tdbs.assessed.size(): " << dbs.assessed.size() << endl;
         while(!dbs.triage.empty()) {
@@ -892,7 +934,7 @@ namespace NWUClustering {
           ne_outer_size = ne_outer.size(); 
           ne_size = ne.size(); 
           if(ne_size + ne_outer_size >= dbs.m_minPts) {
-            dbs.modify_status_vectors(pid, ne); // update `triage` vector
+            dbs.modify_status_vectors(pid, ne, ne_outer); // update `triage` vector
             // if(rank == 5) {
             //   cout << "\n\nnew ne after modify_status_vectors()\n";
             //   for(int i = 0; i < ne.size(); i++) { cout << ne[i].idx << ", "; }
