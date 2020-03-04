@@ -46,7 +46,7 @@ namespace NWUClustering {
     void getSeeds();
 
     // Modifies the  `triage` vector to determine if a point has been seen before or not
-    void modify_status_vectors(kdtree2_result_vector &ne);
+    void modify_status_vectors(int pid, kdtree2_result_vector &ne);
 
   public:
     
