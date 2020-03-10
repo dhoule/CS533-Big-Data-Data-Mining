@@ -813,7 +813,7 @@ namespace NWUClustering {
     p_cur_send = &merge_send1;
     p_cur_insert = &merge_send2;
 
-    if(rank == proc_of_interest) cout << "Init time " << MPI_Wtime() - start << endl; 
+    // if(rank == proc_of_interest) cout << "Init time " << MPI_Wtime() - start << endl; 
 
     MPI_Barrier(MPI_COMM_WORLD);
     
@@ -865,7 +865,7 @@ namespace NWUClustering {
     int v1, v2, par_proc, triples, local_count, global_count;
     double temp_inter_med, inter_med;
 
-    if(rank == proc_of_interest) cout << "Local computation took " << MPI_Wtime() - start << endl;
+    // if(rank == proc_of_interest) cout << "Local computation took " << MPI_Wtime() - start << endl;
 
     inter_med = MPI_Wtime();
 
@@ -1080,7 +1080,7 @@ namespace NWUClustering {
       i++;
     }
 
-    if(rank == proc_of_interest) cout << "Merging took " << MPI_Wtime() - start << endl;
+    // if(rank == proc_of_interest) cout << "Merging took " << MPI_Wtime() - start << endl;
 
     pswap = NULL;
     p_cur_insert = NULL;
