@@ -58,7 +58,11 @@ namespace NWUClustering {
     vector <int> neededIndices; // Values are KdTree indices of points to be used.
 
     vector <int> m_member; // Values are either 0 or 1. It's size = size_of(m_pts.m_i_num_points). Used to determine if a border point or not.
-    vector <int> m_corepoint; // Values are either 0 or 1. It's size = size_of(m_pts.m_i_num_points). Used to determine centroids.
+    vector <int> m_corepoint; // Values are either 0 or 1. It's size = size_of(m_pts.m_i_num_points). Used to determine center points.
+
+    vector <int> triage; // local points that have been found. Deals with `ne` vector. The "growing set."
+    vector <int> assessed; // local points that have been checked as center points, or have been found in the intersection of 2/+ neighborhoods.
+    vector <int> assessed_outer; // remote points that have been seen already. Deals with the `ne_outer` vector.
   };  
 
   void run_dbscan_algo_uf_mpi_interleaved(ClusteringAlgo& dbs); // union find dbscan algorithm using mpi with interleaved communication
