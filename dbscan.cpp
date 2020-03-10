@@ -631,6 +631,27 @@ namespace NWUClustering {
     }
   }
 
+  /*
+    Determines the points that are to be used bassed off of the `p` command line
+    option, if given.
+  */
+  void ClusteringAlgo::getSeeds() {
+    int temp, i = 0, totsPts = m_pts->m_i_num_points;
+    int numPts = totsPts * m_perc_of_dataset;
+    // Use current time as seed for random generator 
+    srand(time(NULL));
+    // Reserve enough memory for the needed elements
+    neededIndices.reserve(numPts);
+    while(i < numPts) {
+      temp = rand() % totsPts;
+      if(find(neededIndices.begin(), neededIndices.end(), temp) == neededIndices.end()) {
+        neededIndices.push_back(temp);
+        i++;
+      }
+    }
+    sort(neededIndices.begin(), neededIndices.end());
+  }
+
   // "uf" == "Union Find"
   // called in mpi_main.cpp
     // Function gets the union of 2 tress, to create a larger cluster
