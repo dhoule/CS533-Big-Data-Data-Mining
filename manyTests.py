@@ -57,7 +57,7 @@ for dataset in datasets:
         for i in range(10):
           # Each command line argument, must be its own string element. No spaces within the strings.
           # args = ['mpiexec','-n','16','./mpi_dbscan','-i','part64.bin', '-b', '-m','5','-e','0.01', '-k','0.75']
-          args = ['mpiexec','-n',str(node),'./mpi_dbscan','-i',dataset, '-b', '-m','5','-e',eps, '-k',str(increment)]
+          args = ['mpiexec','-n',str(node),'./mpi_dbscan','-i',dataset, '-b', '-m','5','-e',eps, '-p',str(increment)]
           # Syntax: subprocess.call(args, *, stdin=None, stdout=None, stderr=None, shell=False)
           # Output is diverted to file
           subprocess.call(args,stdout=fout)
