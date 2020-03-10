@@ -42,6 +42,8 @@ namespace NWUClustering {
     void  trivial_compression(vector <int>* data, vector < vector <int> >* parser);
     void  trivial_decompression(vector <int>* data);
 
+    void getSeeds();
+
   public:
     
     double  m_epsSquare; // AKA radius. It is the square of the "radius" given by the user
@@ -52,6 +54,8 @@ namespace NWUClustering {
     vector <int> m_parents; // Elements hold the pointers of the clustering tree
     vector <int> m_parents_pr; // Elements hold the pointers for which node the point is in
     vector <int> m_child_count; // number of "children" a possible centroid has
+
+    vector <int> neededIndices; // Values are KdTree indices of points to be used.
 
     vector <int> m_member; // Values are either 0 or 1. It's size = size_of(m_pts.m_i_num_points). Used to determine if a border point or not.
     vector <int> m_corepoint; // Values are either 0 or 1. It's size = size_of(m_pts.m_i_num_points). Used to determine centroids.
