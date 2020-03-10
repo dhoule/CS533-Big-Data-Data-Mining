@@ -742,29 +742,17 @@ namespace NWUClustering {
       pid = (*ind)[i]; // TODO need to change how the Point ID is retrieved
       // getting the local neighborhoods of local point
       ne.clear();
-      dbs.m_kdtree->r_nearest_around_point(pid, 0, dbs.m_epsSquare, ne);
-      
       ne_outer.clear();
-      vector<float> qv(dbs.m_pts->m_i_dims);
-      // `qv` stands for Query Vector. It is a vector of the current point's dimensions.
-      for (int u = 0; u < dbs.m_pts->m_i_dims; u++) {
-        qv[u] = dbs.m_kdtree->the_data[pid][u];
-      }
-
-      // getting the remote neighborhood of the local point
-      if(dbs.m_pts_outer->m_i_num_points > 0)
-        dbs.m_kdtree_outer->r_nearest(qv, dbs.m_epsSquare, ne_outer);
-    
-      qv.clear();
-      int ne_outer_size = ne_outer.size();
-      if(ne.size() + ne_outer_size >= dbs.m_minPts) {
+      get_neighborhood_points(dbs, ne, ne_outer, pid);
+      
+      if(ne.size() + ne_outer.size() >= dbs.m_minPts) {
         // pid is a core point
         root = pid;
         dbs.m_corepoint[pid] = 1;
         dbs.m_member[pid] = 1;
         
         // traverse the remote neighbors and add in the communication buffers  
-        for(j = 0; j < ne_outer_size; j++) {
+        for(j = 0; j < ne_outer.size(); j++) {
           npid = ne_outer[j].idx;
           int outer_parentIds = dbs.m_pts_outer->m_prIDs[npid];
           (*p_cur_insert)[outer_parentIds].push_back(pid);
@@ -1056,6 +1044,26 @@ namespace NWUClustering {
     parser.clear();
     init_ex.clear();
     init.clear();
+  }
+
+  // called in `run_dbscan_algo_uf_mpi_interleaved` function.
+    // Attempts to find local and remote points within the given range; eps; of the indexed point; `pid`.
+  void get_neighborhood_points(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid) {
+    int dims = dbs.m_pts->m_i_dims;
+    // getting the local neighborhoods of local point
+    dbs.m_kdtree->r_nearest_around_point(pid, 0, dbs.m_epsSquare, ne);
+    
+    vector<float> qv(dims);
+    // `qv` stands for Query Vector. It is a vector of the current point's dimensions/attributes.
+    for (int u = 0; u < dims; u++) {
+      qv[u] = dbs.m_kdtree->the_data[pid][u];
+    }
+
+    // getting the remote neighborhood of the local point
+    if(dbs.m_pts_outer->m_i_num_points > 0)
+      dbs.m_kdtree_outer->r_nearest(qv, dbs.m_epsSquare, ne_outer);
+  
+    qv.clear();
   }
 };
 
