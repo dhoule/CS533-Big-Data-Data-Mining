@@ -24,9 +24,9 @@ for dataset in datasets:
   # Need to determine the epsilon depending on the dataset used
   if(dataset == 'clus50k.bin'):
     eps = '25'
-  if(dataset == 'part64.bin'):
+  elif(dataset == 'part64.bin'):
     eps = '0.01'
-  if(dataset == 'part128.bin'):
+  elif(dataset == 'part128.bin'):
     eps = '0.008'
 
   # The only number of nodes allowed are: 2^x
@@ -43,8 +43,8 @@ for dataset in datasets:
     # 1.0-0.9
     # increments = [1.0, 0.99, 0.98, 0.97, 0.96, 0.95, 0.94, 0.93, 0.92, 0.91, 0.9]
     # 1.0-0.1
-    increments = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
-    # increments = [0.93]
+    # increments = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
+    increments = [1.0]
     # The Node's file name is made based on the loop options: dataset_node
     nodeFileName = dataset + '_' + str(node) + '.txt'
     # loop over percentage of dataset to use

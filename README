@@ -1,3 +1,8 @@
+Link to paper:
+  http://users.ece.northwestern.edu/~choudhar/Publications/ANewScalableParallelDBSCANAlgorithmUsingDisjointSetDataStructure.pdf 
+To download the original, buggy code:
+  http://cucis.ece.northwestern.edu/projects/Clustering/download_code_dbscan.html
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*   Files: mpi_main.cpp clusters.cpp  clusters.h utils.h utils.cpp          */
 /*   			dbscan.cpp dbscan.h kdtree2.cpp kdtree2.hpp          */
@@ -50,10 +55,3 @@ How to run the tool:
 
 	netCDF file:
 	The coodinates are named as columns (position_col_X1, position_col_X2, ...) and then one additional column named cluster_id for the corresponding cluster id the point belong to. 
-
-5. The Sow And Grow Algorithm allows for an additional, optional, parameter, -k.
-	
-	This parameter determines the percentage of the dataset to be used, rounded to the nearest whole number.
-	The attribute for this parameter is within the range of (0.0, 1.0]. Any number outside of this range will
-	cause the program to exit.
-	If this parameter is not used, the entire dataset is utilized in the algorithm.
