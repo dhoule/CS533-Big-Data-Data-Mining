@@ -36,7 +36,8 @@ static void usage(char *argv0) {
     " -m minpts : input parameter of DBSCAN, min points to form a cluster, e.g. 2\n"
     " -e epsilon  : input parameter of DBSCAN, radius or threshold on neighbourhoods retrieved, e.g. 0.8\n"
     " -o output : clustering results, format, (points coordinates, cluster id)\n"
-    " -k seed_percentage : the percentage of points for each node to use; range is [0.0,1.0), with default value of 1.0\n\n";
+    " -k seed_number : the number of starting points to use, must be less than total points in dataset\n"
+    " -p seed_percentage : the percentage of points for each node to use; range is [0.0,1.0), with default value of 1.0\n\n";
   
   fprintf(stderr, params, argv0);
   exit(-1);
@@ -46,6 +47,7 @@ static void usage(char *argv0) {
 int main(int argc, char** argv) {
   int   opt;
   int   minPts;
+  int seed_number;
   double  eps, start, seed_percentage, preprocessing_start, actual_start;
   char*   outfilename;
   int     isBinaryFile;
@@ -59,6 +61,7 @@ int main(int argc, char** argv) {
   // some default values
   minPts = -1;
   eps = -1;
+  seed_number = 0.0;
   seed_percentage = 1.0;
   isBinaryFile = 1; // default binary file
   outfilename = NULL;
@@ -82,8 +85,11 @@ int main(int argc, char** argv) {
       case 'o':
         outfilename = optarg;
         break;
-      case 'k':
+      case 'p':
         seed_percentage = atof(optarg);
+        break;
+      case 'k':
+        seed_number = atoi(optarg);
         break;
       case '?':
         usage(argv[0]);
