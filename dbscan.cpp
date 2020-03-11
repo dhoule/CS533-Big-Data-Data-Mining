@@ -652,21 +652,102 @@ namespace NWUClustering {
     sort(neededIndices.begin(), neededIndices.end());
   }
 
+  void ClusteringAlgo::modify_status_vectors(int pid, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer) {
+    int ne_size = ne.size();
+    int ne_outer_size = ne_outer.size();
+    int index;
+    vector <int> ne_indexes;
+    vector <int> abIntersection;
+    vector <int> triageDifference;
+    vector <int> neDifference;
+    vector <int> assessNeDiff;
+    kdtree2_result_vector newNe;
+    kdtree2_result_vector newNeOuter;
+    // TODO remove these after testing
+    int rank, nproc;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+
+    // only need to deal with the remote points if there actually are some
+    if(!ne_outer.empty()) {
+      // Determine if any remote points have been seen before
+      if(assessed_outer.empty()) {
+        // Just copy the `ne_outer` indexes to `assessed_outer` since it's empty
+        for(int i = 0; i < ne_outer_size; i++) { assessed_outer.push_back(ne_outer[i].idx); }
+      } else {
+        // Need to determine what remote points have been seen before
+        vector <int> tempHold; // tempory vector to hold kdtree indexes that haen't been seen before
+        for(int i = 0; i < ne_outer_size; i++) {
+          index = ne_outer[i].idx;
+          // if `index` is "new," push the `index` on the back of `tempHold` and the point on the back of `newNeOuter`
+          if(!binary_search(assessed_outer.begin(),assessed_outer.end(),index)){
+            tempHold.push_back(index);
+            newNeOuter.push_back(ne_outer[i]);
+          }
+        }
+        // Add the elements of `tempHold` to the back of `assessed_outer`
+        for(int i = 0; i < tempHold.size(); i++) { assessed_outer.push_back(tempHold[i]); }
+        // since `newNeOuter` only contains remote points that haven't been seen before,
+          // clear out `ne_outer` and replace the values with those of `newNeOuter`.
+          // Remote point pruning.
+        ne_outer.clear();
+        copy(newNeOuter.begin(),newNeOuter.end(),back_inserter(ne_outer));
+      }
+      // keep `assessed_outer` sorted
+      sort(assessed_outer.begin(), assessed_outer.end());
+    }
+    // Need to keep the `assessed` vector sorted
+    sort(assessed.begin(), assessed.end()); 
+    // Turn `ne` vector into a vector of only the indexes; `ne_indexes`
+    for(int i = 0; i < ne_size; i++) { ne_indexes.push_back(ne[i].idx); }
+    // Needs to be sorted to use the other functions
+    sort(ne_indexes.begin(), ne_indexes.end());
+    // `abIntersection` = `triage` OR `ne_indexes`. The elements in both, but not either.
+    set_intersection(triage.begin(),triage.end(),ne_indexes.begin(),ne_indexes.end(),back_inserter(abIntersection));
+    // `neDifference` = `ne_indexes` - `abIntersection`. Only elements in `ne_indexes`, but not `abIntersection`.
+    set_difference(ne_indexes.begin(),ne_indexes.end(),abIntersection.begin(),abIntersection.end(),back_inserter(neDifference));
+    // `triageDifference` = `triage` - `abIntersection`. Only the elements from `triage`, but not `abIntersection`.
+    set_difference(triage.begin(),triage.end(),abIntersection.begin(),abIntersection.end(),back_inserter(triageDifference));
+    // Clear out `triage` to assign it new values.
+    triage.clear();
+    // Copies the values of `triageDifference` into `triage`. `triageDifference` are indexes that aren't in other neighborehoods.
+    copy(triageDifference.begin(),triageDifference.end(),back_inserter(triage));
+    set_difference(neDifference.begin(),neDifference.end(),assessed.begin(),assessed.end(),back_inserter(assessNeDiff));
+    int assessNeDiffSize = assessNeDiff.size();
+    // need to build the `newNe` vector. Based on tests, have to keep the point containing `pid` as well.
+    for(int i = 0; i < ne_size; i++) {
+      index = ne[i].idx;
+      if(binary_search(assessNeDiff.begin(),assessNeDiff.end(),index)){
+        newNe.push_back(ne[i]);
+      }
+    }
+    // clear out `ne`, to replace the values with `newNe`. Local point pruning. 
+    ne.clear();
+    copy(newNe.begin(),newNe.end(),back_inserter(ne));
+    // `assessNeDiff` is clean, and the elements can just be added to the back of `triage`.
+    for(int i = 0; i < assessNeDiffSize; i++) { triage.push_back(assessNeDiff[i]); }
+    // `triage` needs to be sorted
+    sort(triage.begin(), triage.end());
+  }
+
   // "uf" == "Union Find"
   // called in mpi_main.cpp
     // Function gets the union of 2 tress, to create a larger cluster
   void run_dbscan_algo_uf_mpi_interleaved(ClusteringAlgo& dbs) {
+    // initialize some parameters
+    int numPts = dbs.m_pts->m_i_num_points; 
     double start = MPI_Wtime();     
     int i, pid, j, k, npid;
     int rank, nproc;
+    int loopCount = dbs.neededIndices.size(); // Actual number of point indexes that will be checked
+
     kdtree2_result_vector ne;
     kdtree2_result_vector ne_outer;
     
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
-    // initialize some parameters
-    int numPts = dbs.m_pts->m_i_num_points; 
+
     // assign parent to itestf
     dbs.m_parents.resize(numPts, -1);
     dbs.m_parents_pr.resize(numPts, -1);
@@ -699,8 +780,8 @@ namespace NWUClustering {
     vector<int>* ind_outer = dbs.m_kdtree_outer->getIndex();
 
     // setting parents to itself and corresponding proc IDs
-    for(i = 0; i < numPts; i++) { // TODO this is the looping over all of the points
-      pid = (*ind)[i]; // TODO need to change how the Point ID is retrieved
+    for(i = 0; i < numPts; i++) { 
+      pid = (*ind)[i]; 
       dbs.m_parents[pid] = pid;
       dbs.m_parents_pr[pid] = rank;
     }
@@ -732,21 +813,50 @@ namespace NWUClustering {
     p_cur_send = &merge_send1;
     p_cur_insert = &merge_send2;
 
-    if(rank == proc_of_interest) cout << "Init time " << MPI_Wtime() - start << endl; 
+    // if(rank == proc_of_interest) cout << "Init time " << MPI_Wtime() - start << endl; 
 
     MPI_Barrier(MPI_COMM_WORLD);
     
     // the main part of the DBSCAN algorithm (called local computation)
     start = MPI_Wtime();
-    for(i = 0; i < numPts; i++) { // TODO this is the looping over all of the points
-      pid = (*ind)[i]; // TODO need to change how the Point ID is retrieved
+    for(i = 0; i < loopCount; i++) { 
+      pid = (*ind)[dbs.neededIndices.at(i)];
+
+      // if the potential "seed point" has been seen before, there is no need to continue
+        // The `triage` vector should always be empty at this point, no need to check it. 
+      if(!dbs.assessed.empty() && (binary_search(dbs.assessed.begin(),dbs.assessed.end(),pid)))
+        continue;
+
       // getting the local neighborhoods of local point
       ne.clear();
       ne_outer.clear();
       get_neighborhood_points(dbs, ne, ne_outer, pid);
       
       if(ne.size() + ne_outer.size() >= dbs.m_minPts) {
+        // Just go ahead and add `pid` to the `assessed` vector
+        dbs.assessed.push_back(pid);
+        // Modifies status vectors & preforms neighborhood pruning
+        dbs.modify_status_vectors(pid, ne, ne_outer);
         unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
+
+        // `triage` == "growing set"
+        while(!dbs.triage.empty()) {
+          // Clear `ne` & `ne_outer` vectors
+          ne.clear();
+          ne_outer.clear();
+          pid = dbs.triage.front();
+          dbs.triage.erase(dbs.triage.begin());
+          // Attempt to find more points via calling get_neighborhood_points function, given the new centroid point
+          get_neighborhood_points(dbs, ne, ne_outer, pid);
+          if(ne.size() + ne_outer.size() >= dbs.m_minPts) {
+            // `pid` is supposed to be removed from the `triage` vector, and added to the `assessed` vector
+            dbs.assessed.push_back(pid);
+            dbs.modify_status_vectors(pid, ne, ne_outer);
+            unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
+          }
+        }
+        // Need to keep the `assessed` vector sorted. This is a catch-all
+        sort(dbs.assessed.begin(), dbs.assessed.end()); 
       }
     }
       
@@ -755,7 +865,7 @@ namespace NWUClustering {
     int v1, v2, par_proc, triples, local_count, global_count;
     double temp_inter_med, inter_med;
 
-    if(rank == proc_of_interest) cout << "Local computation took " << MPI_Wtime() - start << endl;
+    // if(rank == proc_of_interest) cout << "Local computation took " << MPI_Wtime() - start << endl;
 
     inter_med = MPI_Wtime();
 
@@ -970,7 +1080,7 @@ namespace NWUClustering {
       i++;
     }
 
-    if(rank == proc_of_interest) cout << "Merging took " << MPI_Wtime() - start << endl;
+    // if(rank == proc_of_interest) cout << "Merging took " << MPI_Wtime() - start << endl;
 
     pswap = NULL;
     p_cur_insert = NULL;

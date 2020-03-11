@@ -42,6 +42,7 @@ namespace NWUClustering {
     void  trivial_compression(vector <int>* data, vector < vector <int> >* parser);
     void  trivial_decompression(vector <int>* data);
 
+    void modify_status_vectors(int pid, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer);
     void getSeeds();
 
   public:
