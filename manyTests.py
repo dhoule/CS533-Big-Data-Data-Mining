@@ -4,7 +4,9 @@ import os
 
 
 
-datasets = ['clus50k.bin', 'part64.bin']#, 'part128.bin']
+
+
+datasets = ['clus50k.bin', 'part64.bin', 'texture17695.bin', 't8.8k.bin', 't7.10k.bin', 't5.8k.bin', 't4.8k.bin', 'edge17695.bin']#, 'part128.bin']
 # datasets = ['part64.bin']
 
 # This block is used to create a new list of incremental values.
@@ -24,10 +26,31 @@ for dataset in datasets:
   # Need to determine the epsilon depending on the dataset used
   if(dataset == 'clus50k.bin'):
     eps = '25'
+    mp = '5'
   elif(dataset == 'part64.bin'):
     eps = '0.01'
+    mp = '5'
   elif(dataset == 'part128.bin'):
     eps = '0.008'
+    mp = '5'
+  elif(dataset == 'texture17695.bin'):
+    eps = '3'
+    mp = '2'
+  elif(dataset == 't8.8k.bin'):
+    eps = '10'
+    mp = '10'
+  elif(dataset == 't7.10k.bin'):
+    eps = '10'
+    mp = '12'
+  elif(dataset == 't5.8k.bin'):
+    eps = '8'
+    mp = '21'
+  elif(dataset == 't4.8k.bin'):
+    eps = '10'
+    mp = '20'
+  elif(dataset == 'edge17695.bin'):
+    eps = '3'
+    mp = '2'
 
   # The only number of nodes allowed are: 2^x
   nodes = [2,4,8,16]
@@ -57,7 +80,7 @@ for dataset in datasets:
         for i in range(10):
           # Each command line argument, must be its own string element. No spaces within the strings.
           # args = ['mpiexec','-n','16','./mpi_dbscan','-i','part64.bin', '-b', '-m','5','-e','0.01', '-k','0.75']
-          args = ['mpiexec','-n',str(node),'./mpi_dbscan','-i',dataset, '-b', '-m','5','-e',eps, '-p',str(increment)]
+          args = ['mpiexec','-n',str(node),'./mpi_dbscan','-i',dataset, '-b', '-m',mp,'-e',eps, '-p',str(increment)]
           # Syntax: subprocess.call(args, *, stdin=None, stdout=None, stderr=None, shell=False)
           # Output is diverted to file
           subprocess.call(args,stdout=fout)
@@ -86,7 +109,7 @@ for dataset in datasets:
             # Get min, max, and mean. Min and max need all info preserved. Delete file afterwards.
             # The program output I use has been modified. You will need to update accordingly.
           if (minpts == None) and ("MinPts" in l):
-            minpts = l.split(' ')[3]
+            minpts = l.split(' ')[3].strip()
           
           if (dimensions == None) and ("Dimensions" in l):
             dimensions = l.split(':')[-1].strip()
