@@ -30,7 +30,7 @@
 
 static void usage(char *argv0) {
   const char *params =
-    "Usage: %s [switches] -i filename -b -m minpts -e epsilon -o output [-k seed_percentage]\n"
+    "Usage: %s [switches] -i filename -b -m minpts -e epsilon -o output [-k seed_number] [-p seed_percentage]\n"
     " -i filename : file containing input data to be clustered\n"
     " -b    : input file is in binary format (default, binary and currently the only supported format)\n"
     " -m minpts : input parameter of DBSCAN, min points to form a cluster, e.g. 2\n"
@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
   infilename = NULL;
 
   // determine command line options 
-  while ((opt=getopt(argc,argv,"i:m:e:o:k:?b"))!= EOF) {
+  while ((opt=getopt(argc,argv,"i:m:e:o:k:p:?b"))!= EOF) {
     switch (opt) {
       case 'i':
         infilename = optarg;
