@@ -68,8 +68,8 @@ namespace NWUClustering {
       // resize() - Resizes the container so that it contains n elements
     m_pts_outer->m_points.resize(m_pts_outer->m_i_num_points);
     // resize each new point object
-    int dims = m_pts_outer->m_i_num_points;
-    for(int ll = 0; ll < dims; ll++) 
+    int numPts = m_pts_outer->m_i_num_points;
+    for(int ll = 0; ll < numPts; ll++) 
       m_pts_outer->m_points[ll].resize(dims);
     // resize the point IDs
     m_pts_outer->m_prIDs.resize(m_pts_outer->m_i_num_points, -1);
