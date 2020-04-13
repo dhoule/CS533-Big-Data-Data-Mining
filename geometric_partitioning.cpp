@@ -497,7 +497,8 @@ namespace NWUClustering {
   }
   // TODO need to investigate this further, using `proc_of_interest` for cout() statements
   void update_points(ClusteringAlgo& dbs, int s_count, vector <int>& invalid_pos_as, vector <float>& recv_buf) {
-    int i, j, k, l, r_count = recv_buf.size() / dbs.m_pts->m_i_dims;
+    int dims = dbs.m_pts->m_i_dims;
+    int i, j, k, l, r_count = recv_buf.size() / dims;
     int newPtCt = dbs.m_pts->m_i_num_points + r_count - s_count; // this is used in multiple places, but none of the values change
 
     if(r_count >= s_count) {
@@ -507,12 +508,12 @@ namespace NWUClustering {
       //allocate memory for the points
       dbs.m_pts->m_points.resize(newPtCt);
       for(int ll = 0; ll < newPtCt; ll++)
-        dbs.m_pts->m_points[ll].resize(dbs.m_pts->m_i_dims);
+        dbs.m_pts->m_points[ll].resize(dims);
 
       j = 0;
       for(i = 0; i < invalid_pos_as.size(); i++) {
         if(invalid_pos_as[i] == 1) {
-          for(k = 0; k < dbs.m_pts->m_i_dims; k++)
+          for(k = 0; k < dims; k++)
             dbs.m_pts->m_points[i][k] = recv_buf[j++];
         }
       }     
@@ -522,9 +523,10 @@ namespace NWUClustering {
       j = 0;
       i = 0;  
       if(recv_buf.size() > 0) {
-        for(i = 0; i < dbs.m_pts->m_i_num_points; i++) {
+        int points = dbs.m_pts->m_i_num_points;
+        for(i = 0; i < points; i++) {
           if(invalid_pos_as[i] == 1) {
-            for(k = 0; k < dbs.m_pts->m_i_dims; k++)
+            for(k = 0; k < dims; k++)
               dbs.m_pts->m_points[i][k] = recv_buf[j++];
           
             if(j == recv_buf.size()) {
@@ -536,7 +538,8 @@ namespace NWUClustering {
       }
       
       l = dbs.m_pts->m_i_num_points;
-      for( ; i < invalid_pos_as.size(); i++) {
+      int posSize = invalid_pos_as.size();
+      for( ; i < posSize; i++) {
         if(invalid_pos_as[i] == 1) {
           while(l > i) {
             l--;
@@ -545,7 +548,7 @@ namespace NWUClustering {
           }
 
           if(invalid_pos_as[l] == 0)  
-            for(k = 0; k < dbs.m_pts->m_i_dims; k++)
+            for(k = 0; k < dims; k++)
               dbs.m_pts->m_points[i][k] = dbs.m_pts->m_points[l][k];
         }
       }
@@ -553,7 +556,7 @@ namespace NWUClustering {
       //allocate memory for the points
       dbs.m_pts->m_points.resize(newPtCt);
       for(int ll = 0; ll < newPtCt; ll++)
-        dbs.m_pts->m_points[ll].resize(dbs.m_pts->m_i_dims);
+        dbs.m_pts->m_points[ll].resize(dims);
 
       dbs.m_pts->m_i_num_points = newPtCt;
     }   
@@ -564,25 +567,25 @@ namespace NWUClustering {
     within the new communication system.
   */
   int get_points_to_send(ClusteringAlgo& dbs, vector <float>& send_buf, vector <int>& invalid_pos_as, float median, int d, int rank, int partner_rank) {
-    int i, count = 0, j;
+    int i, count = 0, j, points = dbs.m_pts->m_i_num_points, dims = dbs.m_pts->m_i_dims;
     bool lessRank = rank < partner_rank; // instead of calculating this for every itteration of the loop, just do it once.
-    send_buf.reserve(dbs.m_pts->m_i_num_points * dbs.m_pts->m_i_dims);
+    send_buf.reserve(points * dims);
     invalid_pos_as.clear();
-    invalid_pos_as.resize(dbs.m_pts->m_i_num_points, 0);
+    invalid_pos_as.resize(points, 0);
 
-    for(i = 0; i < dbs.m_pts->m_i_num_points; i++) {
+    for(i = 0; i < points; i++) {
       if (lessRank) {
         if(dbs.m_pts->m_points[i][d] > median) {
           invalid_pos_as[i] = 1;
           count++;
-          for(j = 0; j < dbs.m_pts->m_i_dims; j++)
+          for(j = 0; j < dims; j++)
             send_buf.push_back(dbs.m_pts->m_points[i][j]);
         }
       } else {
         if(dbs.m_pts->m_points[i][d] <= median) {
           invalid_pos_as[i] = 1;
           count++;
-          for(j = 0; j < dbs.m_pts->m_i_dims; j++)
+          for(j = 0; j < dims; j++)
             send_buf.push_back(dbs.m_pts->m_points[i][j]);
         }
       }
@@ -596,14 +599,14 @@ namespace NWUClustering {
     communication system.
   */
   float get_median(ClusteringAlgo& dbs, int d, MPI_Comm& new_comm) { 
-
+    int points = dbs.m_pts->m_i_num_points;
     float median;
     
     vector <float> data;
-    data.reserve(dbs.m_pts->m_i_num_points);
-    data.resize(dbs.m_pts->m_i_num_points, 0);
+    data.reserve(points);
+    data.resize(points, 0);
     // gather all values for a single attribute
-    for (int k=0; k < dbs.m_pts->m_i_num_points; k++)
+    for (int k=0; k < points; k++)
       data[k] = dbs.m_pts->m_points[k][d];
     // Find Kth element without recusion
     median = findKMedian(data, data.size()/2);
@@ -655,9 +658,9 @@ namespace NWUClustering {
     system.
   */
   void compute_global_bounding_box(ClusteringAlgo& dbs, interval* box, interval* gbox, int nproc) {
-    int i, j, k;
+    int i, j, k, dims = dbs.m_pts->m_i_dims;
   
-    interval* gather_local_box = new interval[dbs.m_pts->m_i_dims * nproc];
+    interval* gather_local_box = new interval[dims * nproc];
   
     /* 
       gather the local bounding box first.
@@ -665,16 +668,16 @@ namespace NWUClustering {
       int MPI_Allgather(const void *sendbuf, int  sendcount, MPI_Datatype sendtype, void *recvbuf, 
                         int recvcount, MPI_Datatype recvtype, MPI_Comm comm)
     */
-    int sndRcvCt = sizeof(interval) * dbs.m_pts->m_i_dims; // calculation is done a couple of times. Do it once, and use the variable.
+    int sndRcvCt = sizeof(interval) * dims; // calculation is done a couple of times. Do it once, and use the variable.
     MPI_Allgather(box, sndRcvCt, MPI_BYTE, gather_local_box, sndRcvCt, MPI_BYTE, MPI_COMM_WORLD);
 
     // compute the global bounding box, for each dimension
-    for(i = 0; i < dbs.m_pts->m_i_dims; i++) {
+    for(i = 0; i < dims; i++) {
       gbox[i].lower = gather_local_box[i].lower;
       gbox[i].upper = gather_local_box[i].upper;
       
       k = i;
-      for(j = 0; j < nproc; j++, k += dbs.m_pts->m_i_dims) {
+      for(j = 0; j < nproc; j++, k += dims) {
         if(gbox[i].lower > gather_local_box[k].lower)
           gbox[i].lower = gather_local_box[k].lower;
         
@@ -692,9 +695,9 @@ namespace NWUClustering {
     The 2nd vector element of `nodes_gbox`, and the size of `gbox`, is the number of dimensions in every point.
   */
   void copy_global_box_to_each_node(ClusteringAlgo& dbs, interval** nodes_gbox, interval* gbox, int internal_nodes) {
-    int i, j;
+    int i, j, dims = dbs.m_pts->m_i_dims;
     for(i = 0; i < internal_nodes; i++) {
-      for(j = 0; j < dbs.m_pts->m_i_dims; j++) {
+      for(j = 0; j < dims; j++) {
         nodes_gbox[i][j].upper = gbox[j].upper;
         nodes_gbox[i][j].lower = gbox[j].lower;
       }
@@ -705,7 +708,8 @@ namespace NWUClustering {
     Copies the values of one vector of structs, into another
   */
   void copy_box(ClusteringAlgo& dbs, interval* target_box, interval* source_box) {
-    for(int j = 0; j < dbs.m_pts->m_i_dims; j++) {
+    int dims = dbs.m_pts->m_i_dims;
+    for(int j = 0; j < dims; j++) {
       target_box[j].upper = source_box[j].upper;
       target_box[j].lower = source_box[j].lower;
     }
