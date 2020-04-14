@@ -6,7 +6,7 @@ import os
 
 
 
-datasets = ['clus50k.bin', 'part64.bin', 'texture17695.bin', 't8.8k.bin', 't7.10k.bin', 't5.8k.bin', 't4.8k.bin', 'edge17695.bin']#, 'part128.bin']
+datasets = ['clus50k.bin', 'part64.bin', 'texture17695.bin', 't8.8k.bin', 't7.10k.bin', 't5.8k.bin', 't4.8k.bin']#, 'edge17695.bin']#, 'part128.bin']
 # datasets = ['part64.bin']
 
 # This block is used to create a new list of incremental values.
