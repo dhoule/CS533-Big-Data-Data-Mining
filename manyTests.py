@@ -19,6 +19,8 @@ datasets = ['clus50k.bin', 'part64.bin', 'texture17695.bin', 't8.8k.bin', 't7.10
 #   temp += str(round(increment,2)) + ", "
 # print temp[:-2]
 
+gprof = 0 # 0 = not looking for the profiler. 1 = looking for the profiler files.
+
 # loop over datasets
 for dataset in datasets:
 
@@ -56,6 +58,7 @@ for dataset in datasets:
   nodes = [2,4,8,16]
   # nodes = [2,4]
   datasetFileName = dataset + '_total.txt'
+  gDatasetFileName = 'gprof_' + dataset + '_total.txt'
 
   # loop over allowed nodes
   for node in nodes:
@@ -70,11 +73,13 @@ for dataset in datasets:
     increments = [1.0]
     # The Node's file name is made based on the loop options: dataset_node
     nodeFileName = dataset + '_' + str(node) + '.txt'
+    gNodeFileName = 'gprof_' + dataset + '_' + str(node) + '.txt'
     # loop over percentage of dataset to use
     for increment in increments:
       # print "\t\tStarting Increment Size: " + str(increment) + "\n"
       # Create a file to hold the output to CMD line. The name is made based on the loop options: dataset_node_increment
       fileName = dataset + '_' + str(node) + '_' + str(increment) + '.txt'
+      gFileName = 'gprof_' + dataset + '_' + str(node) + '_' + str(increment) + '.txt'
       with open(fileName,'w+') as fout:
         # do each test 10 times
         for i in range(10):
@@ -84,6 +89,22 @@ for dataset in datasets:
           # Syntax: subprocess.call(args, *, stdin=None, stdout=None, stderr=None, shell=False)
           # Output is diverted to file
           subprocess.call(args,stdout=fout)
+          if(gprof == 1):
+            os.system('gprof -s ./mpi_dbscan gmon.out-*')
+            if os.path.exists(gFileName):
+              append_write = 'a' # append if already exists
+            else:
+              append_write = 'w' # make a new file if not
+            with open(gFileName,append_write) as gfout:
+              os.system('gprof ./mpi_dbscan gmon.sum > temp.txt')
+              with open('temp.txt','r') as gin:
+                gfout.write("*************  " + str(i) + "  *************\n\n")
+                fl = gin.readlines()
+                for l in fl:
+                  gfout.write("\t" + l)
+                gfout.write("\n\n")
+            os.system('rm gmon*')
+            os.system('rm temp.txt')
       
       # Setting the starting values
       minpts = None
@@ -184,7 +205,18 @@ for dataset in datasets:
       with open(nodeFileName,append_write) as fout:
         fout.write(str(node) + "," + str(increment) + "," + str(eps) + "," + str(minpts) + "," + str(dimensions) + "," + str(minPtsInClts) + "," + str(maxPtsInClts) + "," + str(meanPtsInClts) + "," + str(minNoise) + "," + str(maxNoise) + "," + str(meanNoise) + "," + str(minNumOfClusters) + "," + str(maxNumOfClusters) + "," + str(meanNumOfClusters) + "," + str(totalPts) + "," + str(minTime) + "," + str(maxTime) + "," + str(meanTime) + "\n")
     
-      # print "\t\tEnded Increment Size: " + str(increment) + "\n"
+      if(gprof == 1):
+        if os.path.exists(gNodeFileName):
+          append_write = 'a' # append if already exists
+        else:
+          append_write = 'w' # make a new file if not
+        with open(gNodeFileName,append_write) as gfout:
+          gfout.write("*************  " + str(increment) + "  *************\n\n")
+          with open(gFileName,'r') as fin:
+            fl = fin.readlines()
+            for l in fl:
+              gfout.write("\t" + l)
+        os.remove(gFileName)
 
     if os.path.exists(datasetFileName):
       append_write = 'a' # append if already exists
@@ -200,6 +232,21 @@ for dataset in datasets:
         fl = fread.readlines()
         for l in fl:
           fout.write(l)
+
+    if(gprof == 1):
+      if os.path.exists(gDatasetFileName):
+        append_write = 'a' # append if already exists
+      else:
+        flag = True
+        append_write = 'w' # make a new file if not
+      with open(gDatasetFileName,append_write) as fout:
+        fout.write("*************  " + str(node) + "  *************\n\n")
+        with open(gNodeFileName,'r') as fread:
+          fl = fread.readlines()
+          for l in fl:
+            fout.write("\t" + l)
+          fout.write("\n\n")
+      os.remove(gNodeFileName)
 
     # The individual node file is no longer needed, as it has been joined into the dataset file
     os.remove(nodeFileName)
