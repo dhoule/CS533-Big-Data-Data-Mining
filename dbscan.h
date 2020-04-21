@@ -43,6 +43,7 @@ namespace NWUClustering {
     void  trivial_decompression(vector <int>* data);
 
     void modify_status_vectors(int pid, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer);
+    int binarySearch(vector<int>& dirty, int l, int r, int needle, int& flag);
     void getSeeds();
 
   public:
