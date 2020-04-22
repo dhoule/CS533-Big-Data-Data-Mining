@@ -756,8 +756,9 @@ namespace NWUClustering {
             newNeOuter.push_back(ne_outer[i]);
           }
         }
+        int tempHoldSize = tempHold.size();
         // Add the elements of `tempHold` to the back of `assessed_outer`
-        for(int i = 0; i < tempHold.size(); i++) { assessed_outer.push_back(tempHold[i]); }
+        for(int i = 0; i < tempHoldSize; i++) { assessed_outer.push_back(tempHold[i]); }
         // since `newNeOuter` only contains remote points that haven't been seen before,
           // clear out `ne_outer` and replace the values with those of `newNeOuter`.
           // Remote point pruning.
