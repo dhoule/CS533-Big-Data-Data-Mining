@@ -16,7 +16,7 @@ namespace NWUClustering {
   struct Points_Outer {
     array2dfloat m_points; // actual point values
     vector <int> m_prIDs; // pointer IDs for the cluster
-    vector <int> m_ind; // has something to do with cluster IDs for points. TODO
+    vector <int> m_ind; // has something to do with cluster IDs for points. 
 
     int m_i_dims; // number of dimensions
     int m_i_num_points; // number of points in `m_points` attribute
