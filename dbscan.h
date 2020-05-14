@@ -42,6 +42,10 @@ namespace NWUClustering {
     void  trivial_compression(vector <int>* data, vector < vector <int> >* parser);
     void  trivial_decompression(vector <int>* data);
 
+    void modify_status_vectors(kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer);
+    int binarySearch(vector<int>& dirty, int l, int r, int needle, int& flag);
+    void getSeeds();
+
   public:
     
     double  m_epsSquare; // AKA radius. It is the square of the "radius" given by the user
@@ -53,11 +57,19 @@ namespace NWUClustering {
     vector <int> m_parents_pr; // Elements hold the pointers for which node the point is in
     vector <int> m_child_count; // number of "children" a possible centroid has
 
+    vector <int> neededIndices; // Values are KdTree indices of points to be used.
+
     vector <int> m_member; // Values are either 0 or 1. It's size = size_of(m_pts.m_i_num_points). Used to determine if a border point or not.
-    vector <int> m_corepoint; // Values are either 0 or 1. It's size = size_of(m_pts.m_i_num_points). Used to determine centroids.
+    vector <int> m_corepoint; // Values are either 0 or 1. It's size = size_of(m_pts.m_i_num_points). Used to determine center points.
+
+    vector <int> triage; // local points that have been found. Deals with `ne` vector. The "growing set."
+    vector <int> assessed; // local points that have been checked as center points, or have been found in the intersection of 2/+ neighborhoods.
+    vector <int> assessed_outer; // remote points that have been seen already. Deals with the `ne_outer` vector.
   };  
 
   void run_dbscan_algo_uf_mpi_interleaved(ClusteringAlgo& dbs); // union find dbscan algorithm using mpi with interleaved communication
+  void get_neighborhood_points(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid);
+  void unionize_neighborhood(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid, vector < vector <int > >* p_cur_insert);
 };
 
 #endif
