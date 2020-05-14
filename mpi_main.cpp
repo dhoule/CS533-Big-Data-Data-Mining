@@ -30,13 +30,14 @@
 
 static void usage(char *argv0) {
   const char *params =
-    "Usage: %s [switches] -i filename -b -m minpts -e epsilon -o output [-k seed_percentage]\n"
+    "Usage: %s [switches] -i filename -b -m minpts -e epsilon -o output [-k seed_number] [-p seed_percentage]\n"
     " -i filename : file containing input data to be clustered\n"
     " -b    : input file is in binary format (default, binary and currently the only supported format)\n"
     " -m minpts : input parameter of DBSCAN, min points to form a cluster, e.g. 2\n"
     " -e epsilon  : input parameter of DBSCAN, radius or threshold on neighbourhoods retrieved, e.g. 0.8\n"
     " -o output : clustering results, format, (points coordinates, cluster id)\n"
-    " -k seed_percentage : the percentage of points for each node to use; range is [0.0,1.0), with default value of 1.0\n\n";
+    " -k seed_number : the number of starting points to use, must be less than total points in dataset\n"
+    " -p seed_percentage : the percentage of points for each node to use; range is [0.0,1.0), with default value of 1.0\n\n";
   
   fprintf(stderr, params, argv0);
   exit(-1);
@@ -46,6 +47,7 @@ static void usage(char *argv0) {
 int main(int argc, char** argv) {
   int   opt;
   int   minPts;
+  int seed_number;
   double  eps, start, seed_percentage, preprocessing_start, actual_start;
   char*   outfilename;
   int     isBinaryFile;
@@ -59,13 +61,14 @@ int main(int argc, char** argv) {
   // some default values
   minPts = -1;
   eps = -1;
+  seed_number = 0.0;
   seed_percentage = 1.0;
   isBinaryFile = 1; // default binary file
   outfilename = NULL;
   infilename = NULL;
 
   // determine command line options 
-  while ((opt=getopt(argc,argv,"i:m:e:o:k:?b"))!= EOF) {
+  while ((opt=getopt(argc,argv,"i:m:e:o:k:p:?b"))!= EOF) {
     switch (opt) {
       case 'i':
         infilename = optarg;
@@ -82,8 +85,11 @@ int main(int argc, char** argv) {
       case 'o':
         outfilename = optarg;
         break;
-      case 'k':
+      case 'p':
         seed_percentage = atof(optarg);
+        break;
+      case 'k':
+        seed_number = atoi(optarg);
         break;
       case '?':
         usage(argv[0]);
@@ -101,6 +107,7 @@ int main(int argc, char** argv) {
     exit(-1);
   }
   // 'proc_of_interest' defined in utils.h as process 0, the master node
+  if(rank == proc_of_interest) cout << "\n\nDataset used: " << infilename << endl;
   if(rank == proc_of_interest) cout << "Number of process cores " << nproc << endl;
 
   // check if `nproc` is NOT multiple of TWO
@@ -131,14 +138,15 @@ int main(int argc, char** argv) {
   MPI_Barrier(MPI_COMM_WORLD);
   start = MPI_Wtime();
   
-  if(rank == proc_of_interest) cout << "Reading points from file: " << infilename << endl;
+  // if(rank == proc_of_interest) cout << "Reading points from file: " << infilename << endl;
   // determine if there was an error reading from the binary file
   if(dbs.read_file(infilename, isBinaryFile) == -1) {
     MPI_Finalize();
     exit(-1);
   }
 
-  if(rank == proc_of_interest) cout << "Reading the input data file took " << MPI_Wtime() - start << " seconds [pre_processing]"<< endl;
+  // if(rank == proc_of_interest) cout << "Reading the input data file took " << MPI_Wtime() - start << " seconds [pre_processing]"<< endl;
+  if(rank == proc_of_interest) cout << "Dimensions of each point: " << dbs.m_pts->m_i_dims << endl;
   // Make ALL of the nodes/processes wait till they ALL get to this point
   MPI_Barrier(MPI_COMM_WORLD);
   start = MPI_Wtime();
@@ -146,22 +154,21 @@ int main(int argc, char** argv) {
   // parttition the data file geometrically: preprocessing_start, actual_start step
   start_partitioning(dbs);
   MPI_Barrier(MPI_COMM_WORLD);
-  if(rank == proc_of_interest) cout << "Partitioning the data geometrically took " << MPI_Wtime() - start << " seconds [pre_processing]" << endl;
+  // if(rank == proc_of_interest) cout << "Partitioning the data geometrically took " << MPI_Wtime() - start << " seconds [pre_processing]" << endl;
   
   // gather extra(outer) points that falls within the eps radius from the boundary: preprocessing_start, actual_start step
   start = MPI_Wtime();
   get_extra_points(dbs);
   MPI_Barrier(MPI_COMM_WORLD);
-  if(rank == proc_of_interest) cout << "Gathering extra point took " << MPI_Wtime() - start << " seconds [pre_processing]" << endl;
+  // if(rank == proc_of_interest) cout << "Gathering extra point took " << MPI_Wtime() - start << " seconds [pre_processing]" << endl;
     
   // build the kdtrees: preprocessing_start, actual_start step 
   start = MPI_Wtime();
   dbs.build_kdtree();
   dbs.build_kdtree_outer();
-  // TODO call GetSeeds() from here
   MPI_Barrier(MPI_COMM_WORLD);
-  if(rank == proc_of_interest) cout << "Build kdtree took " << MPI_Wtime() - start << " seconds [pre_processing]\n" << endl;
-  if(rank == proc_of_interest) cout << "\nTotal preprocessing time: " << MPI_Wtime() - preprocessing_start << " seconds\n" << endl;
+  // if(rank == proc_of_interest) cout << "Build kdtree took " << MPI_Wtime() - start << " seconds [pre_processing]\n" << endl;
+  // if(rank == proc_of_interest) cout << "\nTotal preprocessing time: " << MPI_Wtime() - preprocessing_start << " seconds\n" << endl;
   //run the DBSCAN algorithm
   start = MPI_Wtime();
   actual_start = start;
@@ -172,9 +179,9 @@ int main(int argc, char** argv) {
   // assign cluster IDs to points
   start = MPI_Wtime();
   dbs.get_clusters_distributed(); 
-  if(rank == proc_of_interest) cout << "Assigning cluster IDs to points " << MPI_Wtime() - start << " seconds [post_processing]" << endl;
-  if(rank == proc_of_interest) cout << "\nTotal time for actual algorithm (including assigning cluster IDs): " << MPI_Wtime() - actual_start << " seconds\n" << endl;
-  if(rank == proc_of_interest) cout << "\nTotal time for evrything: " << MPI_Wtime() - preprocessing_start << " seconds\n" << endl;
+  // if(rank == proc_of_interest) cout << "Assigning cluster IDs to points " << MPI_Wtime() - start << " seconds [post_processing]" << endl;
+  // if(rank == proc_of_interest) cout << "\nTotal time for actual algorithm (including assigning cluster IDs): " << MPI_Wtime() - actual_start << " seconds\n" << endl;
+  // if(rank == proc_of_interest) cout << "\nTotal time for evrything: " << MPI_Wtime() - preprocessing_start << " seconds\n" << endl;
 
 
   if(outfilename != NULL) {
@@ -182,7 +189,7 @@ int main(int argc, char** argv) {
 
     // activate the following line to write the cluster to file
     dbs.writeCluster_distributed(outfilename);
-    if(rank == proc_of_interest) cout << "Writing clusterIDs to disk took " << MPI_Wtime() - start << " seconds [pre_processing]"<< endl;
+    // if(rank == proc_of_interest) cout << "Writing clusterIDs to disk took " << MPI_Wtime() - start << " seconds [pre_processing]"<< endl;
   }
     
   MPI_Finalize();
