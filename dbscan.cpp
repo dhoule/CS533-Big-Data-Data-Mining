@@ -631,6 +631,102 @@ namespace NWUClustering {
     }
   }
 
+  /* 
+    Modified binary search that builds a sorted vector
+    vector<int>& dirty - Vector that is to be searched
+    int l - Left index
+    int r - Right index
+    int needle - Value being looked for
+    int& flag - Reverse flag that is used to determine if `needle` has been found or not. 1 = not found, 0 = found.
+  */
+  int ClusteringAlgo::binarySearch(vector<int>& dirty, int l, int r, int needle, int& flag) { 
+    if (r >= l) { 
+      int delta = r - l;
+      int mid = l + delta / 2; 
+
+      // If the element is present at the middle itself 
+      if(dirty[mid] == needle) {
+        flag = 0;
+        return -42; 
+      }
+
+      // If the element hasn't been found, but the appropriate
+      // place it needs to be has
+      if(delta == 0) {
+        // There is 1 element
+        if(dirty[l] < needle)
+          return r + 1;
+        if(dirty[l] > needle)
+          return l;
+      }
+      if(delta == 1) {
+        // There are 2 elements
+        if(dirty[l] == needle) {
+          flag = 0;
+          return -42; 
+        }
+        if(dirty[r] == needle) {
+          flag = 0;
+          return -42; 
+        }
+        if((dirty[l] < needle) && (dirty[r] < needle))
+          return r + 1;
+
+        if((dirty[l] > needle) && (dirty[r] > needle))
+          return l;
+
+        if((dirty[l] < needle) && (dirty[r] > needle))
+          return r;
+      }
+
+      // If element is smaller than mid, then 
+      // it can only be present in left subarray 
+      if(dirty[mid] > needle) 
+        return binarySearch(dirty, l, mid - 1, needle, flag); 
+
+      // Else the element can only be present in right subarray 
+      return binarySearch(dirty, mid + 1, r, needle, flag); 
+    } 
+
+    // We reach here when element is not 
+    // present in array 
+    return dirty.size(); 
+  } 
+  
+  /*
+    Determines the points that are to be used bassed off of the `p` command line
+    option. Uses the custom `binarySearch()` function to build a sorted vector
+    while looking for values.
+  */
+  void ClusteringAlgo::getSeeds() {
+    int index, i = 1, totsPts = m_pts->m_i_num_points;
+    int it, numPts = totsPts * m_perc_of_dataset;
+    int flag;
+    // Use current time as seed for random generator 
+    srand(time(NULL));
+    // Reserve enough memory for the needed elements
+    neededIndices.reserve(numPts);
+    while(i < numPts) {
+      index = rand() % totsPts;
+      int indiceSize = neededIndices.size();
+      int j = 0;
+      it = -42;
+      flag = 1;
+      if(indiceSize == 0) {
+        neededIndices.push_back(index);
+        continue;
+      }
+      it = binarySearch(neededIndices, 0, indiceSize - 1, index, flag);
+      if(flag){
+        if(j == indiceSize) 
+          neededIndices.push_back(index);
+        else
+          neededIndices.insert(neededIndices.begin() + it, index);
+        i++;
+      }
+    }
+  }
+
   // "uf" == "Union Find"
   // called in mpi_main.cpp
     // Function gets the union of 2 tress, to create a larger cluster
