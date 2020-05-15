@@ -692,7 +692,7 @@ namespace NWUClustering {
     // present in array 
     return dirty.size(); 
   } 
-  
+
   /*
     Determines the points that are to be used bassed off of the `p` command line
     option. Uses the custom `binarySearch()` function to build a sorted vector
@@ -734,6 +734,7 @@ namespace NWUClustering {
     double start = MPI_Wtime();     
     int i, pid, j, k, npid;
     int rank, nproc;
+    int loopCount = dbs.neededIndices.size(); // Actual number of point indexes that will be checked
     kdtree2_result_vector ne;
     kdtree2_result_vector ne_outer;
     
@@ -813,8 +814,8 @@ namespace NWUClustering {
     
     // the main part of the DBSCAN algorithm (called local computation)
     start = MPI_Wtime();
-    for(i = 0; i < numPts; i++) { // TODO this is the looping over all of the points
-      pid = (*ind)[i]; // TODO need to change how the Point ID is retrieved
+    for(i = 0; i < loopCount; i++) { 
+      pid = (*ind)[dbs.neededIndices.at(i)];
       // getting the local neighborhoods of local point
       ne.clear();
       dbs.m_kdtree->r_nearest_around_point(pid, 0, dbs.m_epsSquare, ne);
