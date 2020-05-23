@@ -737,6 +737,8 @@ namespace NWUClustering {
     int loopCount = dbs.neededIndices.size(); // Actual number of point indexes that will be checked
     kdtree2_result_vector ne;
     kdtree2_result_vector ne_outer;
+    kdtree2_result_vector ne2;
+    kdtree2_result_vector ne_outer2;
     
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
@@ -850,39 +852,134 @@ namespace NWUClustering {
         //traverse the local neighbors and perform union operation
         for (j = 0; j < ne.size(); j++) {
           npid = ne[j].idx;
+
+          ne2.clear();
+          dbs.m_kdtree->r_nearest_around_point(pid, 0, dbs.m_epsSquare, ne2);
           
-          // get the root containing npid
-          root1 = npid;
-          root2 = root;
-          if(dbs.m_corepoint[npid] == 1 || dbs.m_member[npid] == 0) {
-            dbs.m_member[npid] = 1;
+          ne_outer2.clear();
+          qv.reserve(dbs.m_pts->m_i_dims);
+          // `qv` stands for Query Vector. It is a vector of the current point's dimensions.
+          for (int u = 0; u < dbs.m_pts->m_i_dims; u++) {
+            qv[u] = dbs.m_kdtree->the_data[pid][u];
+          }
 
-            // REMS algorithm to (union) merge the trees
-            while(dbs.m_parents[root1] != dbs.m_parents[root2]) {
-              if(dbs.m_parents[root1] < dbs.m_parents[root2]) {
-                if(dbs.m_parents[root1] == root1) {
+          // getting the remote neighborhood of the local point
+          if(dbs.m_pts_outer->m_i_num_points > 0)
+            dbs.m_kdtree_outer->r_nearest(qv, dbs.m_epsSquare, ne_outer2);
+        
+          qv.clear();
+
+          if((ne2.size() + ne_outer2.size()) >= dbs.m_minPts) {
+            // get the root containing npid
+            root1 = npid;
+            root2 = root;
+
+            if(dbs.m_corepoint[npid] == 1) {
+              // The `npid` is a "core point"
+              dbs.m_member[npid] = 1;
+
+              // REMS algorithm to (union) merge the trees
+              while(dbs.m_parents[root1] != dbs.m_parents[root2]) {
+                if(dbs.m_parents[root1] < dbs.m_parents[root2]) {
+                  if(dbs.m_parents[root1] == root1) {
+                    dbs.m_parents[root1] = dbs.m_parents[root2];
+                    root = dbs.m_parents[root2];
+                    break;
+                  }
+
+                  // splicing comression technique
+                  int z = dbs.m_parents[root1];
                   dbs.m_parents[root1] = dbs.m_parents[root2];
-                  root = dbs.m_parents[root2];
-                  break;
-                }
+                  root1 = z;
+                } else {
+                  if(dbs.m_parents[root2] == root2) {
+                    dbs.m_parents[root2] = dbs.m_parents[root1];
+                    root = dbs.m_parents[root1];
+                    break;
+                  }
 
-                // splicing comression technique
-                int z = dbs.m_parents[root1];
-                dbs.m_parents[root1] = dbs.m_parents[root2];
-                root1 = z;
-              } else {
-                if(dbs.m_parents[root2] == root2) {
-                  dbs.m_parents[root2] = dbs.m_parents[root1];
-                  root = dbs.m_parents[root1];
-                  break;
+                  // splicing compressio technique
+                  int z = dbs.m_parents[root2];
+                  dbs.m_parents[root2] = dbs.m_parents[root1];                  
+                  root2 = z;
                 }
+              }
+              if(dbs.m_member[npid] == 0) {
+                // `ne` = `ne` - `ne2`
+                kdtree2_result_vector newNe;
+                set_intersection(ne.begin(),ne.end(),ne2.begin(),ne2.end(),back_inserter(newNe),compareByIdx);
+                // clear out `ne`, to replace the values with `newNe`. Local point pruning. 
+                ne.clear();
+                copy(newNe.begin(),newNe.end(),back_inserter(ne));
+              }
+            } else if(dbs.m_member[npid] == 0) {
+              // The `npid` is not a "core point"
+              dbs.m_member[npid] = 1;
 
-                // splicing compressio technique
-                int z = dbs.m_parents[root2];
-                dbs.m_parents[root2] = dbs.m_parents[root1];                  
-                root2 = z;
+              // REMS algorithm to (union) merge the trees
+              while(dbs.m_parents[root1] != dbs.m_parents[root2]) {
+                if(dbs.m_parents[root1] < dbs.m_parents[root2]) {
+                  if(dbs.m_parents[root1] == root1) {
+                    dbs.m_parents[root1] = dbs.m_parents[root2];
+                    root = dbs.m_parents[root2];
+                    break;
+                  }
+
+                  // splicing comression technique
+                  int z = dbs.m_parents[root1];
+                  dbs.m_parents[root1] = dbs.m_parents[root2];
+                  root1 = z;
+                } else {
+                  if(dbs.m_parents[root2] == root2) {
+                    dbs.m_parents[root2] = dbs.m_parents[root1];
+                    root = dbs.m_parents[root1];
+                    break;
+                  }
+
+                  // splicing compressio technique
+                  int z = dbs.m_parents[root2];
+                  dbs.m_parents[root2] = dbs.m_parents[root1];                  
+                  root2 = z;
+                }
               }
             }
+          } else {
+            // The `npid` is not a "core point"
+            // get the root containing npid
+            root1 = npid;
+            root2 = root;
+
+
+            if(dbs.m_corepoint[npid] == 1 || dbs.m_member[npid] == 0) {
+              dbs.m_member[npid] = 1;
+
+              // REMS algorithm to (union) merge the trees
+              while(dbs.m_parents[root1] != dbs.m_parents[root2]) {
+                if(dbs.m_parents[root1] < dbs.m_parents[root2]) {
+                  if(dbs.m_parents[root1] == root1) {
+                    dbs.m_parents[root1] = dbs.m_parents[root2];
+                    root = dbs.m_parents[root2];
+                    break;
+                  }
+
+                  // splicing comression technique
+                  int z = dbs.m_parents[root1];
+                  dbs.m_parents[root1] = dbs.m_parents[root2];
+                  root1 = z;
+                } else {
+                  if(dbs.m_parents[root2] == root2) {
+                    dbs.m_parents[root2] = dbs.m_parents[root1];
+                    root = dbs.m_parents[root1];
+                    break;
+                  }
+
+                  // splicing compressio technique
+                  int z = dbs.m_parents[root2];
+                  dbs.m_parents[root2] = dbs.m_parents[root1];                  
+                  root2 = z;
+                }
+              }
+            } 
           }
         }
       }
@@ -1132,6 +1229,10 @@ namespace NWUClustering {
     parser.clear();
     init_ex.clear();
     init.clear();
+  }
+
+  bool compareByIdx(const kdtree2_result &a, const kdtree2_result &b){
+    return a.idx < b.idx;
   }
 };
 
