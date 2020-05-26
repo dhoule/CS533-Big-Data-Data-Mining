@@ -820,166 +820,64 @@ namespace NWUClustering {
       pid = (*ind)[dbs.neededIndices.at(i)];
       // getting the local neighborhoods of local point
       ne.clear();
-      dbs.m_kdtree->r_nearest_around_point(pid, 0, dbs.m_epsSquare, ne);
-      
       ne_outer.clear();
-      vector<float> qv(dbs.m_pts->m_i_dims);
-      // `qv` stands for Query Vector. It is a vector of the current point's dimensions.
-      for (int u = 0; u < dbs.m_pts->m_i_dims; u++) {
-        qv[u] = dbs.m_kdtree->the_data[pid][u];
-      }
+      get_neighborhood_points(dbs, ne, ne_outer, pid);
 
-      // getting the remote neighborhood of the local point
-      if(dbs.m_pts_outer->m_i_num_points > 0)
-        dbs.m_kdtree_outer->r_nearest(qv, dbs.m_epsSquare, ne_outer);
-    
-      qv.clear();
-      int ne_outer_size = ne_outer.size();
-      if(ne.size() + ne_outer_size >= dbs.m_minPts) {
+      // if the total neighborhood size meets minimum points value
+      if(ne.size() + ne_outer.size() >= dbs.m_minPts) {
         // pid is a core point
         root = pid;
         dbs.m_corepoint[pid] = 1;
         dbs.m_member[pid] = 1;
-        
+
         // traverse the remote neighbors and add in the communication buffers  
-        for(j = 0; j < ne_outer_size; j++) {
+        for(j = 0; j < ne_outer.size(); j++) {
           npid = ne_outer[j].idx;
           int outer_parentIds = dbs.m_pts_outer->m_prIDs[npid];
           (*p_cur_insert)[outer_parentIds].push_back(pid);
           (*p_cur_insert)[outer_parentIds].push_back(dbs.m_pts_outer->m_ind[npid]);
         }
-        
-        //traverse the local neighbors and perform union operation
+
+        //traverse the local neighbors and perform union operation, and other things
         for (j = 0; j < ne.size(); j++) {
           npid = ne[j].idx;
+          if(npid == pid)
+            continue;
 
+          // get the root containing npid
+          root1 = npid;
+          root2 = root;
+          // getting the local neighborhoods of local point
           ne2.clear();
-          dbs.m_kdtree->r_nearest_around_point(pid, 0, dbs.m_epsSquare, ne2);
-          
           ne_outer2.clear();
-          qv.reserve(dbs.m_pts->m_i_dims);
-          // `qv` stands for Query Vector. It is a vector of the current point's dimensions.
-          for (int u = 0; u < dbs.m_pts->m_i_dims; u++) {
-            qv[u] = dbs.m_kdtree->the_data[pid][u];
-          }
-
-          // getting the remote neighborhood of the local point
-          if(dbs.m_pts_outer->m_i_num_points > 0)
-            dbs.m_kdtree_outer->r_nearest(qv, dbs.m_epsSquare, ne_outer2);
-        
-          qv.clear();
+          get_neighborhood_points(dbs, ne2, ne_outer2, npid);
 
           if((ne2.size() + ne_outer2.size()) >= dbs.m_minPts) {
-            // get the root containing npid
-            root1 = npid;
-            root2 = root;
+            // `npid` is a "core point"
+            dbs.m_corepoint[npid] == 1;
 
-            if(dbs.m_corepoint[npid] == 1) {
-              // The `npid` is a "core point"
+            unionize_local_neighborhood(dbs, npid, root, root1, root2);
+
+            if(dbs.m_member[npid] == 0) {
+              // The `npid` is not clustered yet
               dbs.m_member[npid] = 1;
 
-              // REMS algorithm to (union) merge the trees
-              while(dbs.m_parents[root1] != dbs.m_parents[root2]) {
-                if(dbs.m_parents[root1] < dbs.m_parents[root2]) {
-                  if(dbs.m_parents[root1] == root1) {
-                    dbs.m_parents[root1] = dbs.m_parents[root2];
-                    root = dbs.m_parents[root2];
-                    break;
-                  }
-
-                  // splicing comression technique
-                  int z = dbs.m_parents[root1];
-                  dbs.m_parents[root1] = dbs.m_parents[root2];
-                  root1 = z;
-                } else {
-                  if(dbs.m_parents[root2] == root2) {
-                    dbs.m_parents[root2] = dbs.m_parents[root1];
-                    root = dbs.m_parents[root1];
-                    break;
-                  }
-
-                  // splicing compressio technique
-                  int z = dbs.m_parents[root2];
-                  dbs.m_parents[root2] = dbs.m_parents[root1];                  
-                  root2 = z;
-                }
-              }
-              if(dbs.m_member[npid] == 0) {
-                // `ne` = `ne` - `ne2`
-                kdtree2_result_vector newNe;
-                set_intersection(ne.begin(),ne.end(),ne2.begin(),ne2.end(),back_inserter(newNe),compareByIdx);
-                // clear out `ne`, to replace the values with `newNe`. Local point pruning. 
-                ne.clear();
-                copy(newNe.begin(),newNe.end(),back_inserter(ne));
-              }
-            } else if(dbs.m_member[npid] == 0) {
-              // The `npid` is not a "core point"
-              dbs.m_member[npid] = 1;
-
-              // REMS algorithm to (union) merge the trees
-              while(dbs.m_parents[root1] != dbs.m_parents[root2]) {
-                if(dbs.m_parents[root1] < dbs.m_parents[root2]) {
-                  if(dbs.m_parents[root1] == root1) {
-                    dbs.m_parents[root1] = dbs.m_parents[root2];
-                    root = dbs.m_parents[root2];
-                    break;
-                  }
-
-                  // splicing comression technique
-                  int z = dbs.m_parents[root1];
-                  dbs.m_parents[root1] = dbs.m_parents[root2];
-                  root1 = z;
-                } else {
-                  if(dbs.m_parents[root2] == root2) {
-                    dbs.m_parents[root2] = dbs.m_parents[root1];
-                    root = dbs.m_parents[root1];
-                    break;
-                  }
-
-                  // splicing compressio technique
-                  int z = dbs.m_parents[root2];
-                  dbs.m_parents[root2] = dbs.m_parents[root1];                  
-                  root2 = z;
-                }
-              }
+              // `ne` = `ne` - `ne2`
+              kdtree2_result_vector newNe;
+              // set_difference(ne.begin(),ne.end(),ne2.begin(),ne2.end(),back_inserter(newNe),compareByIdx);
+              kdtree_set_difference(ne, ne2);
+              // clear out `ne`, to replace the values with `newNe`. Local point pruning. 
+              ne.clear();
+              copy(newNe.begin(),newNe.end(),back_inserter(ne));
             }
           } else {
-            // The `npid` is not a "core point"
-            // get the root containing npid
-            root1 = npid;
-            root2 = root;
+            // `npid` is not a "core point"
 
-
-            if(dbs.m_corepoint[npid] == 1 || dbs.m_member[npid] == 0) {
+            if(dbs.m_member[npid] == 0) {
+              // The `npid` is not clustered yet
               dbs.m_member[npid] = 1;
-
-              // REMS algorithm to (union) merge the trees
-              while(dbs.m_parents[root1] != dbs.m_parents[root2]) {
-                if(dbs.m_parents[root1] < dbs.m_parents[root2]) {
-                  if(dbs.m_parents[root1] == root1) {
-                    dbs.m_parents[root1] = dbs.m_parents[root2];
-                    root = dbs.m_parents[root2];
-                    break;
-                  }
-
-                  // splicing comression technique
-                  int z = dbs.m_parents[root1];
-                  dbs.m_parents[root1] = dbs.m_parents[root2];
-                  root1 = z;
-                } else {
-                  if(dbs.m_parents[root2] == root2) {
-                    dbs.m_parents[root2] = dbs.m_parents[root1];
-                    root = dbs.m_parents[root1];
-                    break;
-                  }
-
-                  // splicing compressio technique
-                  int z = dbs.m_parents[root2];
-                  dbs.m_parents[root2] = dbs.m_parents[root1];                  
-                  root2 = z;
-                }
-              }
-            } 
+              unionize_local_neighborhood(dbs, npid, root, root1, root2);
+            }
           }
         }
       }
@@ -1234,5 +1132,118 @@ namespace NWUClustering {
   bool compareByIdx(const kdtree2_result &a, const kdtree2_result &b){
     return a.idx < b.idx;
   }
+
+  /*
+    called in `run_dbscan_algo_uf_mpi_interleaved` function.
+    Attempts to find local and remote points within the given range; eps; of the indexed point; `pid`.
+
+    ClusteringAlgo& dbs - DBScan object. The parent for EVERYTHING.
+    kdtree2_result_vector &ne - The local points in the found neighborhood.
+    kdtree2_result_vector &ne_outer - The foreign points in the found neighborhood.
+    int pid - The "id" of the point currently being looked at.
+  */
+  void get_neighborhood_points(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid) {
+    int dims = dbs.m_pts->m_i_dims;
+    // getting the local neighborhoods of local point
+    dbs.m_kdtree->r_nearest_around_point(pid, 0, dbs.m_epsSquare, ne);
+    
+    vector<float> qv(dims);
+    // `qv` stands for Query Vector. It is a vector of the current point's dimensions/attributes.
+    for (int u = 0; u < dims; u++) {
+      qv[u] = dbs.m_kdtree->the_data[pid][u];
+    }
+
+    // getting the remote neighborhood of the local point
+    if(dbs.m_pts_outer->m_i_num_points > 0)
+      dbs.m_kdtree_outer->r_nearest(qv, dbs.m_epsSquare, ne_outer);
+  
+    qv.clear();
+  }
+
+  /* 
+    called in `run_dbscan_algo_uf_mpi_interleaved` function.
+    Only called if the amount of local and remote points found are equal to, or greater than, the minimum points
+    needed to make a cluster. 
+    The remote points are put into a communication buffer, specified by `p_cur_insert`.
+    The local points are joined via a union opperation using the REMS algorithm.
+
+    ClusteringAlgo& dbs - DBScan object. The parent for EVERYTHING.
+    int npid - The "id" of the point currently being looked at, but not `pid`.
+    int root - initially set to `pid`
+    int root1 - used to find the actual "root" node
+    int root2 -  used to find the actual "root" node
+  */ 
+  void unionize_local_neighborhood(ClusteringAlgo& dbs, int npid, int root, int root1, int root2) {
+    
+    int z; // just a place holder for a "bubble sort" type thing
+
+    // REMS algorithm to (union) merge the trees
+    while(dbs.m_parents[root1] != dbs.m_parents[root2]) {
+      if(dbs.m_parents[root1] < dbs.m_parents[root2]) {
+        if(dbs.m_parents[root1] == root1) {
+          dbs.m_parents[root1] = dbs.m_parents[root2];
+          root = dbs.m_parents[root2];
+          break;
+        }
+
+        // splicing comression technique
+        z = dbs.m_parents[root1];
+        dbs.m_parents[root1] = dbs.m_parents[root2];
+        root1 = z;
+      } else {
+
+        if(dbs.m_parents[root2] == root2) {
+          dbs.m_parents[root2] = dbs.m_parents[root1];
+          root = dbs.m_parents[root1];
+          break;
+        }
+        // splicing compressio technique
+        z = dbs.m_parents[root2];
+        dbs.m_parents[root2] = dbs.m_parents[root1];                  
+        root2 = z;
+      }
+    }
+  }
+
+  /*
+    Copies the elements from the sorted range [first1, last1) which are not found in the sorted range [first2, last2),
+     to the range beginning at diff_first, which is also sorted.
+  */
+  kdtree2_result_vector kdtree_set_difference(kdtree2_result_vector ne, kdtree2_result_vector ne2){
+
+    sort(ne.begin(), ne.end(), compareByIdx);
+    sort(ne2.begin(), ne2.end(), compareByIdx);
+    
+    vector<kdtree2_result>::iterator first1 = ne.begin();
+    vector<kdtree2_result>::iterator first2 = ne2.begin();
+    vector<kdtree2_result>::iterator last1 = ne.end();
+    --last1;
+    vector<kdtree2_result>::iterator last2 = ne2.end();
+    --last2;
+    kdtree2_result_vector diff;
+    vector<kdtree2_result>::iterator diff_first = diff.begin();
+        
+    while(first1->idx != last1->idx){
+      if(first2->idx == last2->idx){
+        copy(first1, last1, back_inserter(diff));
+        return diff;
+      }
+      if(first1->idx < first2->idx){
+        kdtree2_result i;
+        i.idx = (*first1).idx;
+        i.dis = (*first1).dis;
+        diff.push_back(i);
+        diff_first++;
+        first1++;
+      }else{
+        if(!(first2->idx < first1->idx)){
+          ++first1;
+        }
+        ++first2;
+      }
+    }
+    return diff;
+  }
+
 };
 
