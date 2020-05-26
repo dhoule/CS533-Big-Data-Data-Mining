@@ -64,6 +64,9 @@ namespace NWUClustering {
 
   void run_dbscan_algo_uf_mpi_interleaved(ClusteringAlgo& dbs); // union find dbscan algorithm using mpi with interleaved communication
   bool compareByIdx(const kdtree2_result &a, const kdtree2_result &b);
+  void get_neighborhood_points(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid);
+  void unionize_local_neighborhood(ClusteringAlgo& dbs, int npid, int root, int root1, int root2);
+  kdtree2_result_vector kdtree_set_difference(kdtree2_result_vector ne, kdtree2_result_vector ne2);
 };
 
 #endif
