@@ -67,6 +67,7 @@ namespace NWUClustering {
   void get_neighborhood_points(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid);
   void unionize_local_neighborhood(ClusteringAlgo& dbs, int npid, int root, int root1, int root2);
   kdtree2_result_vector kdtree_set_difference(kdtree2_result_vector ne, kdtree2_result_vector ne2);
+  vector<kdtree2_result>::iterator kdtree_copy(std::vector<kdtree2_result>::iterator first, std::vector<kdtree2_result>::iterator last, std::vector<kdtree2_result>::iterator result);
 };
 
 #endif
