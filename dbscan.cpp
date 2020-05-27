@@ -864,11 +864,10 @@ namespace NWUClustering {
 
               // `ne` = `ne` - `ne2`
               kdtree2_result_vector newNe;
-              // set_difference(ne.begin(),ne.end(),ne2.begin(),ne2.end(),back_inserter(newNe),compareByIdx);
-              kdtree_set_difference(ne, ne2);
+              newNe = kdtree_set_difference(ne, ne2);
               // clear out `ne`, to replace the values with `newNe`. Local point pruning. 
               ne.clear();
-              copy(newNe.begin(),newNe.end(),back_inserter(ne));
+              kdtree_copy(newNe.begin(),newNe.end(),ne.begin());
             }
           } else {
             // `npid` is not a "core point"
@@ -1225,7 +1224,7 @@ namespace NWUClustering {
         
     while(first1->idx != last1->idx){
       if(first2->idx == last2->idx){
-        copy(first1, last1, back_inserter(diff));
+        kdtree_copy(first1, last1, diff_first);
         return diff;
       }
       if(first1->idx < first2->idx){
@@ -1243,6 +1242,22 @@ namespace NWUClustering {
       }
     }
     return diff;
+  }
+
+  /*
+    Copies the elements in the range, defined by [first, last), to another range beginning at result.
+
+    first, last - the range of elements to copy
+    d_first - the beginning of the destination range.
+  */
+  vector<kdtree2_result>::iterator kdtree_copy(std::vector<kdtree2_result>::iterator first, std::vector<kdtree2_result>::iterator last, std::vector<kdtree2_result>::iterator result){
+    while(first != last){
+      result->dis = first->dis;
+      result->idx = first->idx;
+      ++result;
+      ++first;
+    }
+    return result;
   }
 
 };
