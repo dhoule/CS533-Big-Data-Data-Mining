@@ -709,7 +709,6 @@ namespace NWUClustering {
     while(i < numPts) {
       index = rand() % totsPts;
       int indiceSize = neededIndices.size();
-      int j = 0;
       it = -42;
       flag = 1;
       if(indiceSize == 0) {
@@ -718,12 +717,16 @@ namespace NWUClustering {
       }
       it = binarySearch(neededIndices, 0, indiceSize - 1, index, flag);
       if(flag){
-        if(j == indiceSize) 
+        if(it == indiceSize) 
           neededIndices.push_back(index);
         else
           neededIndices.insert(neededIndices.begin() + it, index);
         i++;
       }
+    }
+    vector<int>* ind = m_kdtree->getIndex();
+    for(i = 0; i < numPts; i++){
+      seedPoints.push_back((*ind)[neededIndices.at(i)]);
     }
   }
 
@@ -734,7 +737,7 @@ namespace NWUClustering {
     double start = MPI_Wtime();     
     int i, pid, j, k, npid;
     int rank, nproc;
-    int loopCount = dbs.neededIndices.size(); // Actual number of point indexes that will be checked
+    // int loopCount = dbs.neededIndices.size(); //TODO Actual number of point indexes that will be checked
     kdtree2_result_vector ne;
     kdtree2_result_vector ne_outer;
     kdtree2_result_vector ne2;
@@ -816,22 +819,24 @@ namespace NWUClustering {
     
     // the main part of the DBSCAN algorithm (called local computation)
     start = MPI_Wtime();
-    for(i = 0; i < loopCount; i++) { 
-      pid = (*ind)[dbs.neededIndices.at(i)];
+    while(!dbs.seedPoints.empty()) { 
+      // pid = (*ind)[dbs.neededIndices.at(i)]; TODO
+      pid = dbs.seedPoints.at(0);
+      dbs.seedPoints.erase(dbs.seedPoints.begin());
       // getting the local neighborhoods of local point
       ne.clear();
       ne_outer.clear();
       get_neighborhood_points(dbs, ne, ne_outer, pid);
-
+      int ne_outerSize = ne_outer.size();
       // if the total neighborhood size meets minimum points value
-      if(ne.size() + ne_outer.size() >= dbs.m_minPts) {
+      if(ne.size() + ne_outerSize >= dbs.m_minPts) {
         // pid is a core point
         root = pid;
         dbs.m_corepoint[pid] = 1;
         dbs.m_member[pid] = 1;
 
         // traverse the remote neighbors and add in the communication buffers  
-        for(j = 0; j < ne_outer.size(); j++) {
+        for(j = 0; j < ne_outerSize; j++) {
           npid = ne_outer[j].idx;
           int outer_parentIds = dbs.m_pts_outer->m_prIDs[npid];
           (*p_cur_insert)[outer_parentIds].push_back(pid);
@@ -861,13 +866,41 @@ namespace NWUClustering {
             if(dbs.m_member[npid] == 0) {
               // The `npid` is not clustered yet
               dbs.m_member[npid] = 1;
-
+              if(find(dbs.seedPoints.begin(), dbs.seedPoints.end(), npid) == dbs.seedPoints.end()){
+                int it, flag;
+                it = dbs.binarySearch(dbs.seedPoints, 0, dbs.seedPoints.size() - 1, npid, flag);
+                if(flag){
+                  if(it == dbs.seedPoints.size()) 
+                    dbs.seedPoints.push_back(npid);
+                  else
+                    dbs.seedPoints.insert(dbs.seedPoints.begin() + it, npid);
+                }
+              }
               // `ne` = `ne` - `ne2`
               kdtree2_result_vector newNe;
               newNe = kdtree_set_difference(ne, ne2);
               // clear out `ne`, to replace the values with `newNe`. Local point pruning. 
               ne.clear();
               kdtree_copy(newNe.begin(),newNe.end(),ne.begin());
+              // need to get the `pid` of each point and remove it from `dbs.seedPoints`
+              
+              int newNeSize = newNe.size();
+              
+              if(newNeSize > 0) {
+                vector <int> erasePids;
+                vector <int> newSeeds;
+                erasePids.reserve(newNeSize);
+                for(int q = 0; q < newNeSize; q++){
+                  erasePids.push_back(newNe.at(q).idx);
+                }
+                sort(dbs.seedPoints.begin(), dbs.seedPoints.end());
+                sort(erasePids.begin(), erasePids.end());
+                // set_difference(dbs.seedPoints.begin(), dbs.seedPoints.end(), erasePids.begin(), erasePids.end(), back_inserter(newSeeds));
+                newSeeds = kdtree_id_set_difference(dbs.seedPoints.begin(), dbs.seedPoints.end(), erasePids.begin(), erasePids.end());
+                // if(rank == 0) cout << "newNeSize " << newNeSize << "\terasePids " << erasePids.size() << "\tnewSeeds " << newSeeds.size() << "\tdbs.seedPoints " << dbs.seedPoints.size()<< endl;
+                dbs.seedPoints.clear();
+                copy(newSeeds.begin(), newSeeds.end(), back_inserter(dbs.seedPoints));
+              }
             }
           } else {
             // `npid` is not a "core point"
@@ -1241,6 +1274,29 @@ namespace NWUClustering {
         ++first2;
       }
     }
+    return diff;
+  }
+
+  vector<int> kdtree_id_set_difference(vector<int>::iterator first1, vector<int>::iterator last1, vector<int>::iterator first2, vector<int>::iterator last2){
+
+    // --last1;
+    // --last2;
+    vector<int> diff;
+    // vector<int>::iterator diff_first = diff.begin();
+
+    while (first1 != last1 && first2 != last2) {
+      if (*first1 < *first2) {
+        diff.push_back(*first1);
+        // ++diff_first;
+        ++first1;
+      } else if (*first2 < *first1) {
+        ++first2;
+      } else {
+        ++first1;
+        ++first2;
+      }
+    }
+    copy(first1,last1,back_inserter(diff));
     return diff;
   }
 
