@@ -844,67 +844,68 @@ namespace NWUClustering {
         }
 
         //traverse the local neighbors and perform union operation, and other things
-        for (j = 0; j < ne.size(); j++) {
-          npid = ne[j].idx;
+        while(!ne.empty()) {
+          npid = ne.at(0).idx;
+          ne.erase(ne.begin());
           if(npid == pid)
             continue;
-
           // get the root containing npid
           root1 = npid;
           root2 = root;
           // getting the local neighborhoods of local point
           ne2.clear();
-          ne_outer2.clear();
+          ne_outer2.clear(); 
           get_neighborhood_points(dbs, ne2, ne_outer2, npid);
-
+          
           if((ne2.size() + ne_outer2.size()) >= dbs.m_minPts) {
             // `npid` is a "core point"
             dbs.m_corepoint[npid] == 1;
-
+            
             unionize_local_neighborhood(dbs, npid, root, root1, root2);
-
+            
             if(dbs.m_member[npid] == 0) {
               // The `npid` is not clustered yet
               dbs.m_member[npid] = 1;
-              if(find(dbs.seedPoints.begin(), dbs.seedPoints.end(), npid) == dbs.seedPoints.end()){
-                int it, flag;
-                it = dbs.binarySearch(dbs.seedPoints, 0, dbs.seedPoints.size() - 1, npid, flag);
-                if(flag){
-                  if(it == dbs.seedPoints.size()) 
-                    dbs.seedPoints.push_back(npid);
-                  else
-                    dbs.seedPoints.insert(dbs.seedPoints.begin() + it, npid);
-                }
+              int it, flag = 0;
+              it = dbs.binarySearch(dbs.seedPoints, 0, dbs.seedPoints.size() - 1, npid, flag);
+              if(flag){
+                if(it == dbs.seedPoints.size()) 
+                  dbs.seedPoints.push_back(npid);
+                else
+                  dbs.seedPoints.insert(dbs.seedPoints.begin() + it, npid);
               }
               // `ne` = `ne` - `ne2`
-              kdtree2_result_vector newNe;
-              newNe = kdtree_set_difference(ne, ne2);
-              // clear out `ne`, to replace the values with `newNe`. Local point pruning. 
-              ne.clear();
-              kdtree_copy(newNe.begin(),newNe.end(),ne.begin());
-              // need to get the `pid` of each point and remove it from `dbs.seedPoints`
+              if(ne.size() > 0) {
+                kdtree2_result_vector newNe;
+                newNe = kdtree_set_difference(ne, ne2); 
+                // clear out `ne`, to replace the values with `newNe`. Local point pruning. 
+                ne.clear();
+                kdtree_copy(newNe.begin(),newNe.end(),ne.begin());
+                
+                int newNeSize = newNe.size();
+                // need to get the `pid` of each point and remove it from `dbs.seedPoints`
               
-              int newNeSize = newNe.size();
               
-              if(newNeSize > 0) {
-                vector <int> erasePids;
-                vector <int> newSeeds;
-                erasePids.reserve(newNeSize);
-                for(int q = 0; q < newNeSize; q++){
-                  erasePids.push_back(newNe.at(q).idx);
-                }
-                sort(dbs.seedPoints.begin(), dbs.seedPoints.end());
-                sort(erasePids.begin(), erasePids.end());
-                // set_difference(dbs.seedPoints.begin(), dbs.seedPoints.end(), erasePids.begin(), erasePids.end(), back_inserter(newSeeds));
-                newSeeds = kdtree_id_set_difference(dbs.seedPoints.begin(), dbs.seedPoints.end(), erasePids.begin(), erasePids.end());
-                // if(rank == 0) cout << "newNeSize " << newNeSize << "\terasePids " << erasePids.size() << "\tnewSeeds " << newSeeds.size() << "\tdbs.seedPoints " << dbs.seedPoints.size()<< endl;
-                dbs.seedPoints.clear();
-                copy(newSeeds.begin(), newSeeds.end(), back_inserter(dbs.seedPoints));
+              
+                // if(newNeSize > 0) {
+                //   vector <int> erasePids;
+                //   vector <int> newSeeds;
+                //   erasePids.reserve(newNeSize);
+                //   get_ids(newNe, erasePids);
+
+                //   // sort(dbs.seedPoints.begin(), dbs.seedPoints.end());
+                //   // sort(erasePids.begin(), erasePids.end());
+                //   // set_difference(dbs.seedPoints.begin(), dbs.seedPoints.end(), erasePids.begin(), erasePids.end(), back_inserter(newSeeds));
+                //   newSeeds = kdtree_id_set_difference(dbs.seedPoints.begin(), dbs.seedPoints.end(), erasePids.begin(), erasePids.end());
+                //   // if(rank == 0) cout << "newNeSize " << newNeSize << "\terasePids " << erasePids.size() << "\tnewSeeds " << newSeeds.size() << "\tdbs.seedPoints " << dbs.seedPoints.size()<< endl;
+                //   dbs.seedPoints.clear();
+                //   copy(newSeeds.begin(), newSeeds.end(), back_inserter(dbs.seedPoints));
+                // }
               }
             }
           } else {
             // `npid` is not a "core point"
-
+            
             if(dbs.m_member[npid] == 0) {
               // The `npid` is not clustered yet
               dbs.m_member[npid] = 1;
@@ -1175,6 +1176,7 @@ namespace NWUClustering {
     int pid - The "id" of the point currently being looked at.
   */
   void get_neighborhood_points(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid) {
+    
     int dims = dbs.m_pts->m_i_dims;
     // getting the local neighborhoods of local point
     dbs.m_kdtree->r_nearest_around_point(pid, 0, dbs.m_epsSquare, ne);
@@ -1184,7 +1186,7 @@ namespace NWUClustering {
     for (int u = 0; u < dims; u++) {
       qv[u] = dbs.m_kdtree->the_data[pid][u];
     }
-
+    
     // getting the remote neighborhood of the local point
     if(dbs.m_pts_outer->m_i_num_points > 0)
       dbs.m_kdtree_outer->r_nearest(qv, dbs.m_epsSquare, ne_outer);
@@ -1314,6 +1316,12 @@ namespace NWUClustering {
       ++first;
     }
     return result;
+  }
+
+  void get_ids(kdtree2_result_vector &dirty, vector<int> &clean) {
+    int dirtySize = dirty.size();
+    for(int i = 0; i < dirtySize; i++)
+      clean.push_back(dirty.at(i).idx);
   }
 
 };
