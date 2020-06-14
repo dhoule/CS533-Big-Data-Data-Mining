@@ -735,13 +735,17 @@ namespace NWUClustering {
     // Function gets the union of 2 tress, to create a larger cluster
   void run_dbscan_algo_uf_mpi_interleaved(ClusteringAlgo& dbs) {
     double start = MPI_Wtime();     
-    int i, pid, j, k, npid;
+    int i, pid, j, k, npid, newNeDiffSize, newNeIntSize;
     int rank, nproc;
     // int loopCount = dbs.neededIndices.size(); //TODO Actual number of point indexes that will be checked
     kdtree2_result_vector ne;
     kdtree2_result_vector ne_outer;
     kdtree2_result_vector ne2;
     kdtree2_result_vector ne_outer2;
+    kdtree2_result_vector newNeDiff;
+    kdtree2_result_vector newNeInt;
+    vector<int> erasePids;
+    vector<int> newSeeds;
     
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
@@ -866,41 +870,47 @@ namespace NWUClustering {
             if(dbs.m_member[npid] == 0) {
               // The `npid` is not clustered yet
               dbs.m_member[npid] = 1;
-              int it, flag = 0;
-              it = dbs.binarySearch(dbs.seedPoints, 0, dbs.seedPoints.size() - 1, npid, flag);
-              if(flag){
-                if(it == dbs.seedPoints.size()) 
-                  dbs.seedPoints.push_back(npid);
-                else
-                  dbs.seedPoints.insert(dbs.seedPoints.begin() + it, npid);
-              }
+              // int it, flag = 0;
+              // it = dbs.binarySearch(dbs.seedPoints, 0, dbs.seedPoints.size() - 1, npid, flag);
+              // if(flag){
+              //   if(it == dbs.seedPoints.size()) 
+              //     dbs.seedPoints.push_back(npid);
+              //   else
+              //     dbs.seedPoints.insert(dbs.seedPoints.begin() + it, npid);
+              // }
               // `ne` = `ne` - `ne2`
               if(ne.size() > 0) {
-                kdtree2_result_vector newNe;
-                newNe = kdtree_set_difference(ne, ne2); 
+                sort(ne.begin(), ne.end(), compareByIdx);
+                sort(ne2.begin(), ne2.end(), compareByIdx);
+
+                newNeDiff.clear();
+                newNeInt.clear();
+                newNeDiff = kdtree_set_difference(ne, ne2); 
+                set_intersection(ne.begin(), ne.end(), ne2.begin(), ne2.end(), back_inserter(newNeInt), compareByIdx);
+                // newNeInt = kdtree_set_intersection(ne, ne2);
+                newNeDiffSize = newNeDiff.size();
+                newNeIntSize = newNeInt.size();
                 // clear out `ne`, to replace the values with `newNe`. Local point pruning. 
-                ne.clear();
-                kdtree_copy(newNe.begin(),newNe.end(),ne.begin());
+                if(newNeDiffSize > 0){
+                  // ne.resize(newNeDiffSize);
+                  // ne.clear();
+                  ne = kdtree_copy_with_new(newNeDiff.begin(), newNeDiff.end());
+                  // copy(newNeDiff.begin(), newNeDiff.end(), back_inserter(ne));
+                }
                 
-                int newNeSize = newNe.size();
                 // need to get the `pid` of each point and remove it from `dbs.seedPoints`
               
               
               
-                // if(newNeSize > 0) {
-                //   vector <int> erasePids;
-                //   vector <int> newSeeds;
-                //   erasePids.reserve(newNeSize);
-                //   get_ids(newNe, erasePids);
-
-                //   // sort(dbs.seedPoints.begin(), dbs.seedPoints.end());
-                //   // sort(erasePids.begin(), erasePids.end());
-                //   // set_difference(dbs.seedPoints.begin(), dbs.seedPoints.end(), erasePids.begin(), erasePids.end(), back_inserter(newSeeds));
-                //   newSeeds = kdtree_id_set_difference(dbs.seedPoints.begin(), dbs.seedPoints.end(), erasePids.begin(), erasePids.end());
-                //   // if(rank == 0) cout << "newNeSize " << newNeSize << "\terasePids " << erasePids.size() << "\tnewSeeds " << newSeeds.size() << "\tdbs.seedPoints " << dbs.seedPoints.size()<< endl;
-                //   dbs.seedPoints.clear();
-                //   copy(newSeeds.begin(), newSeeds.end(), back_inserter(dbs.seedPoints));
-                // }
+                if(newNeIntSize > 0) {
+                  erasePids.clear();
+                  newSeeds.clear();
+                  get_ids(newNeInt, erasePids);
+                  // set_difference(dbs.seedPoints.begin(), dbs.seedPoints.end(), erasePids.begin(), erasePids.end(), back_inserter(newSeeds));
+                  newSeeds = kdtree_id_set_difference(dbs.seedPoints.begin(), dbs.seedPoints.end(), erasePids.begin(), erasePids.end());
+                  dbs.seedPoints.clear();
+                  copy(newSeeds.begin(), newSeeds.end(), back_inserter(dbs.seedPoints));
+                }
               }
             }
           } else {
@@ -1157,6 +1167,12 @@ namespace NWUClustering {
     vec_prID.clear();
     ne.clear();
     ne_outer.clear();
+    ne2.clear();
+    ne_outer2.clear(); 
+    newNeDiff.clear();
+    newNeInt.clear();
+    erasePids.clear();
+    newSeeds.clear();
     parser.clear();
     init_ex.clear();
     init.clear();
@@ -1281,8 +1297,8 @@ namespace NWUClustering {
 
   vector<int> kdtree_id_set_difference(vector<int>::iterator first1, vector<int>::iterator last1, vector<int>::iterator first2, vector<int>::iterator last2){
 
-    // --last1;
-    // --last2;
+    --last1;
+    --last2;
     vector<int> diff;
     // vector<int>::iterator diff_first = diff.begin();
 
@@ -1308,11 +1324,26 @@ namespace NWUClustering {
     first, last - the range of elements to copy
     d_first - the beginning of the destination range.
   */
-  vector<kdtree2_result>::iterator kdtree_copy(std::vector<kdtree2_result>::iterator first, std::vector<kdtree2_result>::iterator last, std::vector<kdtree2_result>::iterator result){
+  vector<kdtree2_result>::iterator kdtree_copy(vector<kdtree2_result>::iterator first, vector<kdtree2_result>::iterator last, vector<kdtree2_result>::iterator result){
     while(first != last){
       result->dis = first->dis;
       result->idx = first->idx;
       ++result;
+      ++first;
+    }
+    return result;
+  }
+
+  kdtree2_result_vector kdtree_copy_with_new(vector<kdtree2_result>::iterator first, vector<kdtree2_result>::iterator last) {
+    kdtree2_result_vector result;
+    while(first != last){
+      kdtree2_result i;
+      i.idx = (*first).idx;
+      i.dis = (*first).dis;
+      result.push_back(i);
+      // result->dis = first->dis;
+      // result->idx = first->idx;
+      // ++result;
       ++first;
     }
     return result;
