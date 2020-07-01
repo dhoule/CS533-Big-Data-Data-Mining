@@ -395,6 +395,9 @@ void kdtree2::r_nearest_around_point(int idxin, int correltime, float r2, kdtree
   sr.correltime = correltime;
   sr.ballsize = r2; 
   sr.nn = 0; 
+  // if(rank == 0) {
+  //   cout << "r_nearest_around_point idxin " << idxin << "\tcorreltime " << correltime << endl;
+  // }
   root->search(sr); 
 
   if (sort_results) sort(result.begin(), result.end()); 
@@ -432,7 +435,6 @@ kdtree2_node::~kdtree2_node() {
   be improved in actual run time. 
 */
 void kdtree2_node::search(searchrecord& sr) {
-
   if ( (left == NULL) && (right == NULL)) {
     // we are on a terminal node
     if (sr.nn == 0) {
@@ -604,62 +606,78 @@ void kdtree2_node::process_terminal_node(searchrecord& sr) {
   Called from kdtree2_node::search()
 */
 void kdtree2_node::process_terminal_node_fixedball(searchrecord& sr) {
+  int i = l, k;
   int centeridx  = sr.centeridx;
   int correltime = sr.correltime;
   int dim        = sr.dim;
+  int indexofi;
   float ballsize = sr.ballsize;
+  float dis;
+  bool early_exit;
 
   bool rearrange = sr.rearrange; 
   const array2dfloat& data = *sr.data;
 
-  for (int i=l; i<=u;i++) {
-    int indexofi = sr.ind[i]; 
-    float dis;
-    bool early_exit; 
-
+  while (i <= u) {
+    indexofi = sr.ind[i]; 
+    dis = 0.0;
+    early_exit = false; 
+    k = 0;
     if (rearrange) {
-      early_exit = false;
-      dis = 0.0;
-      for (int k=0; k<dim; k++) {
+      // early_exit = false; // TODO
+      // dis = 0.0; // TODO
+      while (k < dim) {
         dis += squared(data[i][k] - sr.qv[k]);
         if (dis > ballsize) {
           early_exit=true; 
           break;
         }
+        k++;
       }
-      if(early_exit) continue; // next iteration of mainloop
+      if(early_exit) {
+        i++;
+        continue; // next iteration of mainloop
+      }
       // why do we do things like this?  because if we take an early
       // exit (due to distance being too large) which is common, then
       // we need not read in the actual point index, thus saving main
       // memory bandwidth.  If the distance to point is less than the
       // ballsize, though, then we need the index.
       //
-      indexofi = sr.ind[i];
+      // indexofi = sr.ind[i]; // TODO
     } else {
       // 
       // but if we are not using the rearranged data, then
       // we must always 
-      indexofi = sr.ind[i];
-      early_exit = false;
-      dis = 0.0;
-      for (int k=0; k<dim; k++) {
+      // indexofi = sr.ind[i]; // TODO
+      // early_exit = false; // TODO
+      // dis = 0.0; // TODO
+      while (k < dim) {
         dis += squared(data[indexofi][k] - sr.qv[k]);
         if (dis > ballsize) {
           early_exit= true; 
           break;
         }
+        k++;
       }
-      if(early_exit) continue; // next iteration of mainloop
+      if(early_exit) {
+        i++;
+        continue; // next iteration of mainloop
+      }
     } // end if rearrange. 
     
     if (centeridx > 0) {
       // we are doing decorrelation interval
-      if (abs(indexofi-centeridx) < correltime) continue; // skip this point. 
+      if (abs(indexofi-centeridx) < correltime) {
+        i++;
+        continue; // skip this point. 
+      }
     }
 
     kdtree2_result e;
     e.idx = indexofi;
     e.dis = dis;
     sr.result.push_back(e);
+    i++;
   }
 }
