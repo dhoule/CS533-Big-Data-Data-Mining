@@ -67,10 +67,10 @@ namespace NWUClustering {
   bool compareByIdx(const kdtree2_result &a, const kdtree2_result &b);
   void get_neighborhood_points(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid);
   void unionize_local_neighborhood(ClusteringAlgo& dbs, int npid, int root, int root1, int root2);
+  kdtree2_result_vector kdtree_set_intersection(kdtree2_result_vector ne, kdtree2_result_vector ne2);
   kdtree2_result_vector kdtree_set_difference(kdtree2_result_vector ne, kdtree2_result_vector ne2);
-  vector<int> kdtree_id_set_difference(vector<int>::iterator first1, vector<int>::iterator last1, vector<int>::iterator first2, vector<int>::iterator last2);
+  vector<int> kdtree_id_set_difference(vector<int> ne, vector<int> ne2);
   vector<kdtree2_result>::iterator kdtree_copy(vector<kdtree2_result>::iterator first, vector<kdtree2_result>::iterator last, vector<kdtree2_result>::iterator result);
-  kdtree2_result_vector kdtree_copy_with_new(vector<kdtree2_result>::iterator first, vector<kdtree2_result>::iterator last);
   void get_ids(kdtree2_result_vector &dirty, vector<int> &clean);
 };
 
