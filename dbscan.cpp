@@ -1286,14 +1286,14 @@ namespace NWUClustering {
     return ne;
   }
 
-  vector<int> kdtree_id_set_difference(vector<int> first, vector<int> last){
+  vector<int> kdtree_id_set_difference(vector<int> ne, vector<int> ne2){
     int flag = 0;
 
-    vector<int>::iterator first1 = first.begin();
-    vector<int>::iterator first2 = last.begin();
-    vector<int>::iterator last1 = first.end();
+    vector<int>::iterator first1 = ne.begin();
+    vector<int>::iterator first2 = ne2.begin();
+    vector<int>::iterator last1 = ne.end();
     // --last1;
-    vector<int>::iterator last2 = last.end();
+    vector<int>::iterator last2 = ne2.end();
     // --last2;
     vector<int> diff;
     // vector<int>::iterator diff_first = diff.begin();
