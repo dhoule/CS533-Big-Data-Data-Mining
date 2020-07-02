@@ -1319,7 +1319,7 @@ namespace NWUClustering {
       // copy(first1,last1,back_inserter(diff));
       return diff;
     } 
-    return first;
+    return ne;
   }
 
   /*
