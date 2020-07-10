@@ -52,6 +52,7 @@ namespace NWUClustering {
     int   m_minPts; // The minimum number of points, given by the user, to start a cluster
     int   m_compression;
     double m_perc_of_dataset; // The percentage of the points each node is to use, given by the user. Default value is 1.0(all points)
+    // int funcCounter;
 
     vector <int> m_parents; // Elements hold the pointers of the clustering tree
     vector <int> m_parents_pr; // Elements hold the pointers for which node the point is in
@@ -70,6 +71,9 @@ namespace NWUClustering {
   void run_dbscan_algo_uf_mpi_interleaved(ClusteringAlgo& dbs); // union find dbscan algorithm using mpi with interleaved communication
   void get_neighborhood_points(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid);
   void unionize_neighborhood(ClusteringAlgo& dbs, kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer, int pid, vector < vector <int > >* p_cur_insert);
+  vector<int> kdtree_id_set_difference(vector<int> ne, vector<int> ne2);
+  vector<int> kdtree_id_set_intersection(vector<int> ne, vector<int> ne2);
+  void get_ids(kdtree2_result_vector &dirty, vector<int> &clean);
 };
 
 #endif
