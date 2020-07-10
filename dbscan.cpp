@@ -1286,8 +1286,15 @@ namespace NWUClustering {
     return ne;
   }
 
+  /*
+    Preforms vector set difference based on the KdTree IDs.
+
+    vector<int> ne - vector to be tested against
+    vector<int> ne2  - vector that is the testee
+  */
   vector<int> kdtree_id_set_difference(vector<int> ne, vector<int> ne2){
-    int flag = 0;
+    int diffFlag = 0;
+    int intFlag = 0;
 
     vector<int>::iterator first1 = ne.begin();
     vector<int>::iterator first2 = ne2.begin();
@@ -1296,30 +1303,36 @@ namespace NWUClustering {
     vector<int>::iterator last2 = ne2.end();
     // --last2;
     vector<int> diff;
-    // vector<int>::iterator diff_first = diff.begin();
 
     while (first1 != last1 && first2 != last2) {
       if (*first1 < *first2) {
         diff.push_back(*first1);
-        flag = 1;
+        diffFlag = 1;
         // ++diff_first;
         ++first1;
       } else if (*first2 < *first1) {
         ++first2;
       } else {
+        intFlag = 1;
         ++first1;
         ++first2;
       }
     }
-    if(flag) {
+    if(diffFlag) {
+      // There is a difference between the first and second vectors
       while (first1 != last1){
         diff.push_back(*first1);
         ++first1;
       }
-      // copy(first1,last1,back_inserter(diff));
       return diff;
-    } 
-    return ne;
+    } else if(intFlag) {
+      // There was no difference, but there was an intersection.
+      // So need to return an empty vector
+      return diff;
+    } else {
+      // The 2 vectors are completely different, so just return the first vector.
+      return ne;
+    }
   }
 
   /*
