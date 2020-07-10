@@ -36,6 +36,7 @@ namespace NWUClustering {
     m_minPts =  minPts;
     m_compression = 0; // can set to 1 if want to compress specailly in the first round of communication
     m_perc_of_dataset = seed_percentage;
+    // funcCounter = 0;
   }
 
   // Destructor
@@ -706,7 +707,7 @@ namespace NWUClustering {
       }
       it = binarySearch(neededIndices, 0, indiceSize - 1, index, flag);
       if(flag){
-        if(j == indiceSize) 
+        if(it == indiceSize) 
           neededIndices.push_back(index);
         else
           neededIndices.insert(neededIndices.begin() + it, index);
@@ -721,6 +722,10 @@ namespace NWUClustering {
     kdtree2_result_vector &ne_outer - The foreign points in the found neighborhood.
   */
   void ClusteringAlgo::modify_status_vectors(kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer) {
+    // int rank, nproc;
+    // MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    // MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+
     int ne_size = ne.size();
     int ne_outer_size = ne_outer.size();
     int index;
@@ -764,33 +769,86 @@ namespace NWUClustering {
     // Need to keep the `assessed` vector sorted
     sort(assessed.begin(), assessed.end()); 
     // Turn `ne` vector into a vector of only the indexes; `ne_indexes`
-    for(int i = 0; i < ne_size; i++) { ne_indexes.push_back(ne[i].idx); }
+    // for(int i = 0; i < ne_size; i++) { ne_indexes.push_back(ne[i].idx); }
+    get_ids(ne, ne_indexes);
+    // if(rank == 0) cout << "ne " << ne.size() << "\tne_indexes " << ne_indexes.size() << endl;
     // Needs to be sorted to use the other functions
     sort(ne_indexes.begin(), ne_indexes.end());
     // `abIntersection` = `triage` OR `ne_indexes`. The elements in both, but not either.
-    set_intersection(triage.begin(),triage.end(),ne_indexes.begin(),ne_indexes.end(),back_inserter(abIntersection));
+    // set_intersection(triage.begin(),triage.end(),ne_indexes.begin(),ne_indexes.end(),back_inserter(abIntersection));
+    abIntersection = kdtree_id_set_intersection(triage, ne_indexes);
+    // if(rank == 0) cout << "abIntersection " << abIntersection.size() << endl;
     // `neDifference` = `ne_indexes` - `abIntersection`. Only elements in `ne_indexes`, but not `abIntersection`.
-    set_difference(ne_indexes.begin(),ne_indexes.end(),abIntersection.begin(),abIntersection.end(),back_inserter(neDifference));
+    // set_difference(ne_indexes.begin(),ne_indexes.end(),abIntersection.begin(),abIntersection.end(),back_inserter(neDifference));
+    neDifference = kdtree_id_set_difference(ne_indexes, abIntersection);
+    // if(rank == 0) cout << "neDifference " << neDifference.size() << endl;
     // `triageDifference` = `triage` - `abIntersection`. Only the elements from `triage`, but not `abIntersection`.
-    set_difference(triage.begin(),triage.end(),abIntersection.begin(),abIntersection.end(),back_inserter(triageDifference));
+    // set_difference(triage.begin(),triage.end(),abIntersection.begin(),abIntersection.end(),back_inserter(triageDifference));
+    triageDifference = kdtree_id_set_difference(triage, abIntersection);
+    // if(rank == 0 && funcCounter == 1) {
+    //   cout << "triage = [" << endl;
+    //   for(int i = 0; i < triage.size(); i++)
+    //     cout << triage[i] << ", ";
+    //   cout << "]" << endl;
+    //   cout << "ne_indexes = [" << endl;
+    //   for(int i = 0; i < ne_indexes.size(); i++)
+    //     cout << ne_indexes[i] << ", ";
+    //   cout << "]" << endl;
+    //   cout << "abIntersection = [" << endl;
+    //   for(int i = 0; i < abIntersection.size(); i++)
+    //     cout << abIntersection[i] << ", ";
+    //   cout << "]" << endl;
+    //   cout << "neDifference = [" << endl;
+    //   for(int i = 0; i < neDifference.size(); i++)
+    //     cout << neDifference[i] << ", ";
+    //   cout << "]" << endl;
+    //   cout << "triageDifference = [" << endl;
+    //   for(int i = 0; i < triageDifference.size(); i++)
+    //     cout << triageDifference[i] << ", ";
+    //   cout << "]" << endl;
+    // }
     // Clear out `triage` to assign it new values.
     triage.clear();
     // Copies the values of `triageDifference` into `triage`. `triageDifference` are indexes that aren't in other neighborehoods.
     copy(triageDifference.begin(),triageDifference.end(),back_inserter(triage));
-    set_difference(neDifference.begin(),neDifference.end(),assessed.begin(),assessed.end(),back_inserter(assessNeDiff));
+    // triage = kdtree_id_set_difference(triage, abIntersection);
+    // set_difference(neDifference.begin(),neDifference.end(),assessed.begin(),assessed.end(),back_inserter(assessNeDiff));
+    assessNeDiff = kdtree_id_set_difference(neDifference, assessed);
+    // if(rank == 0 && funcCounter == 1) {
+    //   cout << "triage2 = [" << endl;
+    //   for(int i = 0; i < triage.size(); i++)
+    //     cout << triage[i] << ", ";
+    //   cout << "]" << endl;
+    //   cout << "assessNeDiff = [" << endl;
+    //   for(int i = 0; i < assessNeDiff.size(); i++)
+    //     cout << assessNeDiff[i] << ", ";
+    //   cout << "]" << endl;
+    //   cout << "assessed = [" << endl;
+    //   for(int i = 0; i < assessed.size(); i++)
+    //     cout << assessed[i] << ", ";
+    //   cout << "]" << endl;
+    // }
     int assessNeDiffSize = assessNeDiff.size();
     // need to build the `newNe` vector.
-    for(int i = 0; i < ne_size; i++) {
-      index = ne[i].idx;
-      if(binary_search(assessNeDiff.begin(),assessNeDiff.end(),index)){
-        newNe.push_back(ne[i]);
+    if(assessNeDiffSize > 0) {
+      for(int i = 0; i < ne_size; i++) {
+        index = ne[i].idx;
+        if(binary_search(assessNeDiff.begin(),assessNeDiff.end(),index)){
+          newNe.push_back(ne[i]);
+        }
       }
+      // if(rank == 0) cout << "newNe " << newNe.size() << endl;
+      // clear out `ne`, to replace the values with `newNe`. Local point pruning. 
+      ne.clear();
+      copy(newNe.begin(),newNe.end(),back_inserter(ne));
+      // if(rank == 0) cout << "ne " << ne.size() << endl;
+      // if(rank == 0) cout << "triage " << triage.size() << endl;
+      // `assessNeDiff` is clean, and the elements can just be added to the back of `triage`.
+      for(int i = 0; i < assessNeDiffSize; i++) { triage.push_back(assessNeDiff[i]); }
     }
-    // clear out `ne`, to replace the values with `newNe`. Local point pruning. 
-    ne.clear();
-    copy(newNe.begin(),newNe.end(),back_inserter(ne));
-    // `assessNeDiff` is clean, and the elements can just be added to the back of `triage`.
-    for(int i = 0; i < assessNeDiffSize; i++) { triage.push_back(assessNeDiff[i]); }
+    
+    // if(rank == 0) cout << "triage " << triage.size() << endl;
+    // if(rank == 0) cout << "---------------------------" << endl;
     // `triage` needs to be sorted
     sort(triage.begin(), triage.end());
   }
@@ -900,10 +958,11 @@ namespace NWUClustering {
       if(ne.size() + ne_outer.size() >= dbs.m_minPts) {
         // Just go ahead and add `pid` to the `assessed` vector
         dbs.assessed.push_back(pid);
+        // dbs.funcCounter = dbs.funcCounter + 1;
         // Modifies status vectors & preforms neighborhood pruning
         dbs.modify_status_vectors(ne, ne_outer);
         unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
-
+        // if(rank == 0 && dbs.funcCounter == 1) cout << "----------------------------" << endl;
         // `triage` == "growing set"
         while(!dbs.triage.empty()) {
           // Clear `ne` & `ne_outer` vectors
@@ -917,9 +976,11 @@ namespace NWUClustering {
             // `pid` is supposed to be removed from the `triage` vector, and added to the `assessed` vector
             dbs.assessed.push_back(pid);
             dbs.modify_status_vectors(ne, ne_outer);
+            // if(rank == 0 && dbs.funcCounter == 1) cout << "----------------------------" << endl;
             unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
           }
         }
+        // if(rank == 0 && dbs.funcCounter == 1) cout << "+++++++++++++++++++++++++++++" << endl;
         // Need to keep the `assessed` vector sorted. This is a catch-all
         sort(dbs.assessed.begin(), dbs.assessed.end()); 
       }
@@ -1274,6 +1335,91 @@ namespace NWUClustering {
         }
       }
     }
+  }
+
+  /*
+    Preforms vector set difference based on the KdTree IDs.
+
+    vector<int> ne - vector to be tested against
+    vector<int> ne2  - vector that is the testee
+  */
+  vector<int> kdtree_id_set_difference(vector<int> ne, vector<int> ne2){
+    int diffFlag = 0;
+    int intFlag = 0;
+
+    vector<int>::iterator first1 = ne.begin();
+    vector<int>::iterator first2 = ne2.begin();
+    vector<int>::iterator last1 = ne.end();
+    // --last1;
+    vector<int>::iterator last2 = ne2.end();
+    // --last2;
+    vector<int> diff;
+
+    while (first1 != last1 && first2 != last2) {
+      if (*first1 < *first2) {
+        diff.push_back(*first1);
+        diffFlag = 1;
+        // ++diff_first;
+        ++first1;
+      } else if (*first2 < *first1) {
+        ++first2;
+      } else {
+        intFlag = 1;
+        ++first1;
+        ++first2;
+      }
+    }
+    if(diffFlag) {
+      // There is a difference between the first and second vectors
+      while (first1 != last1){
+        diff.push_back(*first1);
+        ++first1;
+      }
+      return diff;
+    } else if(intFlag) {
+      // There was no difference, but there was an intersection.
+      // So need to return an empty vector
+      return diff;
+    } else {
+      // The 2 vectors are completely different, so just return the first vector.
+      return ne;
+    }
+  }
+
+  vector<int> kdtree_id_set_intersection(vector<int> ne, vector<int> ne2) {
+    vector<int>::iterator first1 = ne.begin();
+    vector<int>::iterator first2 = ne2.begin();
+    vector<int>::iterator last1 = ne.end();
+
+    vector<int>::iterator last2 = ne2.end();
+
+    vector<int> inter;
+
+    while (first1 != last1 && first2 != last2) {
+      if (*first1 < *first2) {
+        ++first1;
+      } else if (*first2 < *first1) {
+        ++first2;
+      } else {
+        inter.push_back(*first1);
+        ++first1;
+        ++first2;
+      }
+    }
+    return inter;
+  }
+
+  /*
+    Gets the KdTree IDs from the `dirty` kdtree2_result_vector vector, and puts
+    them into the `clean` Int vector.
+
+    kdtree2_result_vector &dirty - vector that holds the wanted IDs
+    vector<int> &clean - vector to receive the IDs
+  */
+  void get_ids(kdtree2_result_vector &dirty, vector<int> &clean) {
+    int dirtySize = dirty.size();
+    for(int i = 0; i < dirtySize; i++)
+      clean.push_back(dirty.at(i).idx);
   }
 };
 
