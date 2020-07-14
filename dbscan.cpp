@@ -720,9 +720,9 @@ namespace NWUClustering {
     kdtree2_result_vector &ne_outer - The foreign points in the found neighborhood.
   */
   void ClusteringAlgo::modify_status_vectors(kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer) {
-    int rank, nproc;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+    // int rank, nproc;
+    // MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    // MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
     int ne_size = ne.size();
     int ne_outer_size = ne_outer.size();
@@ -759,10 +759,11 @@ namespace NWUClustering {
         // since `newNeOuter` only contains remote points that haven't been seen before,
           // clear out `ne_outer` and replace the values with those of `newNeOuter`.
           // Remote point pruning.
-        ne_outer.clear();
-        int newNeOuterSize = newNeOuter.size();
-        for(int i = 0; i < newNeOuterSize; i++) { ne_outer.push_back(newNeOuter[i]); }
+        // ne_outer.clear();
+        // int newNeOuterSize = newNeOuter.size();
+        // for(int i = 0; i < newNeOuterSize; i++) { ne_outer.push_back(newNeOuter[i]); }
         // copy(newNeOuter.begin(),newNeOuter.end(),back_inserter(ne_outer));
+        ne_outer = newNeOuter;
       }
       // keep `assessed_outer` sorted
       sort(assessed_outer.begin(), assessed_outer.end());
@@ -785,12 +786,12 @@ namespace NWUClustering {
     // if(rank == 0) cout << "neDifference " << neDifference.size() << endl;
     // `triageDifference` = `triage` - `abIntersection`. Only the elements from `triage`, but not `abIntersection`.
     // set_difference(triage.begin(),triage.end(),abIntersection.begin(),abIntersection.end(),back_inserter(triageDifference));
-    triageDifference = kdtree_id_set_difference(triage, abIntersection);
+    // triageDifference = kdtree_id_set_difference(triage, abIntersection);
     // Clear out `triage` to assign it new values.
-    triage.clear();
+    // triage.clear();
     // Copies the values of `triageDifference` into `triage`. `triageDifference` are indexes that aren't in other neighborehoods.
-    copy(triageDifference.begin(),triageDifference.end(),back_inserter(triage));
-    // triage = kdtree_id_set_difference(triage, abIntersection);
+    // copy(triageDifference.begin(),triageDifference.end(),back_inserter(triage));
+    triage = kdtree_id_set_difference(triage, abIntersection);
     // set_difference(neDifference.begin(),neDifference.end(),assessed.begin(),assessed.end(),back_inserter(assessNeDiff));
     assessNeDiff = kdtree_id_set_difference(neDifference, assessed);
     int assessNeDiffSize = assessNeDiff.size();
@@ -804,13 +805,13 @@ namespace NWUClustering {
       }
       // if(rank == 0) cout << "newNe " << newNe.size() << endl;
       // clear out `ne`, to replace the values with `newNe`. Local point pruning. 
-      ne.clear();
-      copy(newNe.begin(),newNe.end(),back_inserter(ne));
+      // ne.clear();
+      // copy(newNe.begin(),newNe.end(),back_inserter(ne));
+      ne = newNe;
       // if(rank == 0) cout << "ne " << ne.size() << endl;
       // if(rank == 0) cout << "triage " << triage.size() << endl;
       // `assessNeDiff` is clean, and the elements can just be added to the back of `triage`.
-      // for(int i = 0; i < assessNeDiffSize; i++) { triage.push_back(assessNeDiff[i]); }
-      triage = assessNeDiff;
+      for(int i = 0; i < assessNeDiffSize; i++) { triage.push_back(assessNeDiff[i]); }
     }
     
     // if(rank == 0) cout << "triage " << triage.size() << endl;
