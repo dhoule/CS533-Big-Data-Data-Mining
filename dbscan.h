@@ -52,14 +52,13 @@ namespace NWUClustering {
     int   m_minPts; // The minimum number of points, given by the user, to start a cluster
     int   m_compression;
     double m_perc_of_dataset; // The percentage of the points each node is to use, given by the user. Default value is 1.0(all points)
-    // int funcCounter;
 
     vector <int> m_parents; // Elements hold the pointers of the clustering tree
     vector <int> m_parents_pr; // Elements hold the pointers for which node the point is in
     vector <int> m_child_count; // number of "children" a possible centroid has
 
     vector <int> neededIndices; // Values are KdTree indices of points to be used.
-
+    
     vector <int> m_member; // Values are either 0 or 1. It's size = size_of(m_pts.m_i_num_points). Used to determine if a border point or not.
     vector <int> m_corepoint; // Values are either 0 or 1. It's size = size_of(m_pts.m_i_num_points). Used to determine center points.
 
