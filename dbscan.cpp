@@ -36,7 +36,6 @@ namespace NWUClustering {
     m_minPts =  minPts;
     m_compression = 0; // can set to 1 if want to compress specailly in the first round of communication
     m_perc_of_dataset = seed_percentage;
-    // funcCounter = 0;
   }
 
   // Destructor
@@ -698,7 +697,6 @@ namespace NWUClustering {
     while(i < numPts) {
       index = rand() % totsPts;
       int indiceSize = neededIndices.size();
-      int j = 0;
       it = -42;
       flag = 1;
       if(indiceSize == 0) {
@@ -722,9 +720,9 @@ namespace NWUClustering {
     kdtree2_result_vector &ne_outer - The foreign points in the found neighborhood.
   */
   void ClusteringAlgo::modify_status_vectors(kdtree2_result_vector &ne, kdtree2_result_vector &ne_outer) {
-    // int rank, nproc;
-    // MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    // MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+    int rank, nproc;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
     int ne_size = ne.size();
     int ne_outer_size = ne_outer.size();
@@ -742,10 +740,11 @@ namespace NWUClustering {
       // Determine if any remote points have been seen before
       if(assessed_outer.empty()) {
         // Just copy the `ne_outer` indexes to `assessed_outer` since it's empty
-        for(int i = 0; i < ne_outer_size; i++) { assessed_outer.push_back(ne_outer[i].idx); }
+        // for(int i = 0; i < ne_outer_size; i++) { assessed_outer.push_back(ne_outer[i].idx); }
+        get_ids(ne_outer, assessed_outer); 
       } else {
         // Need to determine what remote points have been seen before
-        vector <int> tempHold; // tempory vector to hold kdtree indexes that haen't been seen before
+        vector <int> tempHold; // tempory vector to hold kdtree indexes that haven't been seen before
         for(int i = 0; i < ne_outer_size; i++) {
           index = ne_outer[i].idx;
           // if `index` is "new," push the `index` on the back of `tempHold` and the point on the back of `newNeOuter`
@@ -761,7 +760,9 @@ namespace NWUClustering {
           // clear out `ne_outer` and replace the values with those of `newNeOuter`.
           // Remote point pruning.
         ne_outer.clear();
-        copy(newNeOuter.begin(),newNeOuter.end(),back_inserter(ne_outer));
+        int newNeOuterSize = newNeOuter.size();
+        for(int i = 0; i < newNeOuterSize; i++) { ne_outer.push_back(newNeOuter[i]); }
+        // copy(newNeOuter.begin(),newNeOuter.end(),back_inserter(ne_outer));
       }
       // keep `assessed_outer` sorted
       sort(assessed_outer.begin(), assessed_outer.end());
@@ -785,28 +786,6 @@ namespace NWUClustering {
     // `triageDifference` = `triage` - `abIntersection`. Only the elements from `triage`, but not `abIntersection`.
     // set_difference(triage.begin(),triage.end(),abIntersection.begin(),abIntersection.end(),back_inserter(triageDifference));
     triageDifference = kdtree_id_set_difference(triage, abIntersection);
-    // if(rank == 0 && funcCounter == 1) {
-    //   cout << "triage = [" << endl;
-    //   for(int i = 0; i < triage.size(); i++)
-    //     cout << triage[i] << ", ";
-    //   cout << "]" << endl;
-    //   cout << "ne_indexes = [" << endl;
-    //   for(int i = 0; i < ne_indexes.size(); i++)
-    //     cout << ne_indexes[i] << ", ";
-    //   cout << "]" << endl;
-    //   cout << "abIntersection = [" << endl;
-    //   for(int i = 0; i < abIntersection.size(); i++)
-    //     cout << abIntersection[i] << ", ";
-    //   cout << "]" << endl;
-    //   cout << "neDifference = [" << endl;
-    //   for(int i = 0; i < neDifference.size(); i++)
-    //     cout << neDifference[i] << ", ";
-    //   cout << "]" << endl;
-    //   cout << "triageDifference = [" << endl;
-    //   for(int i = 0; i < triageDifference.size(); i++)
-    //     cout << triageDifference[i] << ", ";
-    //   cout << "]" << endl;
-    // }
     // Clear out `triage` to assign it new values.
     triage.clear();
     // Copies the values of `triageDifference` into `triage`. `triageDifference` are indexes that aren't in other neighborehoods.
@@ -814,20 +793,6 @@ namespace NWUClustering {
     // triage = kdtree_id_set_difference(triage, abIntersection);
     // set_difference(neDifference.begin(),neDifference.end(),assessed.begin(),assessed.end(),back_inserter(assessNeDiff));
     assessNeDiff = kdtree_id_set_difference(neDifference, assessed);
-    // if(rank == 0 && funcCounter == 1) {
-    //   cout << "triage2 = [" << endl;
-    //   for(int i = 0; i < triage.size(); i++)
-    //     cout << triage[i] << ", ";
-    //   cout << "]" << endl;
-    //   cout << "assessNeDiff = [" << endl;
-    //   for(int i = 0; i < assessNeDiff.size(); i++)
-    //     cout << assessNeDiff[i] << ", ";
-    //   cout << "]" << endl;
-    //   cout << "assessed = [" << endl;
-    //   for(int i = 0; i < assessed.size(); i++)
-    //     cout << assessed[i] << ", ";
-    //   cout << "]" << endl;
-    // }
     int assessNeDiffSize = assessNeDiff.size();
     // need to build the `newNe` vector.
     if(assessNeDiffSize > 0) {
@@ -844,7 +809,8 @@ namespace NWUClustering {
       // if(rank == 0) cout << "ne " << ne.size() << endl;
       // if(rank == 0) cout << "triage " << triage.size() << endl;
       // `assessNeDiff` is clean, and the elements can just be added to the back of `triage`.
-      for(int i = 0; i < assessNeDiffSize; i++) { triage.push_back(assessNeDiff[i]); }
+      // for(int i = 0; i < assessNeDiffSize; i++) { triage.push_back(assessNeDiff[i]); }
+      triage = assessNeDiff;
     }
     
     // if(rank == 0) cout << "triage " << triage.size() << endl;
@@ -900,7 +866,6 @@ namespace NWUClustering {
     dbs.m_corepoint.resize(numPts, 0);
     // returns the starting address of the `the_data`
     vector<int>* ind = dbs.m_kdtree->getIndex();
-    vector<int>* ind_outer = dbs.m_kdtree_outer->getIndex();
 
     // setting parents to itself and corresponding proc IDs
     for(i = 0; i < numPts; i++) { 
@@ -947,7 +912,9 @@ namespace NWUClustering {
 
       // if the potential "seed point" has been seen before, there is no need to continue
         // The `triage` vector should always be empty at this point, no need to check it. 
-      if(!dbs.assessed.empty() && (binary_search(dbs.assessed.begin(),dbs.assessed.end(),pid)))
+      // if(!dbs.assessed.empty() && (binary_search(dbs.assessed.begin(),dbs.assessed.end(),pid)))
+      int falseFlag = 1;
+      if(!dbs.assessed.empty() && (dbs.binarySearch(dbs.assessed, 0, dbs.assessed.size() - 1, pid, falseFlag) == -42))
         continue;
 
       // getting the local neighborhoods of local point
@@ -958,11 +925,9 @@ namespace NWUClustering {
       if(ne.size() + ne_outer.size() >= dbs.m_minPts) {
         // Just go ahead and add `pid` to the `assessed` vector
         dbs.assessed.push_back(pid);
-        // dbs.funcCounter = dbs.funcCounter + 1;
         // Modifies status vectors & preforms neighborhood pruning
         dbs.modify_status_vectors(ne, ne_outer);
         unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
-        // if(rank == 0 && dbs.funcCounter == 1) cout << "----------------------------" << endl;
         // `triage` == "growing set"
         while(!dbs.triage.empty()) {
           // Clear `ne` & `ne_outer` vectors
@@ -976,12 +941,10 @@ namespace NWUClustering {
             // `pid` is supposed to be removed from the `triage` vector, and added to the `assessed` vector
             dbs.assessed.push_back(pid);
             dbs.modify_status_vectors(ne, ne_outer);
-            // if(rank == 0 && dbs.funcCounter == 1) cout << "----------------------------" << endl;
             unionize_neighborhood(dbs, ne, ne_outer, pid, p_cur_insert);
           }
         }
-        // if(rank == 0 && dbs.funcCounter == 1) cout << "+++++++++++++++++++++++++++++" << endl;
-        // Need to keep the `assessed` vector sorted. This is a catch-all
+         // Need to keep the `assessed` vector sorted. This is a catch-all
         sort(dbs.assessed.begin(), dbs.assessed.end()); 
       }
     }
@@ -1222,7 +1185,6 @@ namespace NWUClustering {
     merge_send1.clear();
     merge_send2.clear();
     ind = NULL;
-    ind_outer = NULL;
 
     vec_prID.clear();
     ne.clear();
@@ -1359,7 +1321,6 @@ namespace NWUClustering {
       if (*first1 < *first2) {
         diff.push_back(*first1);
         diffFlag = 1;
-        // ++diff_first;
         ++first1;
       } else if (*first2 < *first1) {
         ++first2;
@@ -1369,21 +1330,21 @@ namespace NWUClustering {
         ++first2;
       }
     }
-    if(diffFlag) {
+    if(diffFlag || (first1 < last1)) {
       // There is a difference between the first and second vectors
       while (first1 != last1){
         diff.push_back(*first1);
         ++first1;
       }
       return diff;
-    } else if(intFlag) {
+    } 
+    if(intFlag) {
       // There was no difference, but there was an intersection.
       // So need to return an empty vector
       return diff;
-    } else {
-      // The 2 vectors are completely different, so just return the first vector.
-      return ne;
-    }
+    } 
+    // The 2 vectors are completely different, so just return the first vector.
+    return ne;
   }
 
   vector<int> kdtree_id_set_intersection(vector<int> ne, vector<int> ne2) {
