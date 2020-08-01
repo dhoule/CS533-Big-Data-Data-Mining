@@ -724,10 +724,10 @@ namespace NWUClustering {
         i++;
       }
     }
-    vector<int>* ind = m_kdtree->getIndex();
-    for(i = 0; i < numPts; i++){
-      seedPoints.push_back((*ind)[neededIndices.at(i)]);
-    }
+    // vector<int>* ind = m_kdtree->getIndex();
+    // for(i = 0; i < numPts; i++){
+    //   seedPoints.push_back((*ind)[neededIndices.at(i)]);
+    // }
   }
 
   // "uf" == "Union Find"
@@ -737,7 +737,8 @@ namespace NWUClustering {
     double start = MPI_Wtime();     
     int i, pid, j, k, npid, newNeDiffSize, newNeIntSize;
     int rank, nproc;
-    // int loopCount = dbs.neededIndices.size(); //TODO Actual number of point indexes that will be checked
+    int loopCount = dbs.neededIndices.size(); //TODO Actual number of point indexes that will be checked
+    int minPts = dbs.m_minPts;
     kdtree2_result_vector ne;
     kdtree2_result_vector ne_outer;
     kdtree2_result_vector ne2;
@@ -823,10 +824,11 @@ namespace NWUClustering {
     
     // the main part of the DBSCAN algorithm (called local computation)
     start = MPI_Wtime();
-    while(!dbs.seedPoints.empty()) { 
-      // pid = (*ind)[dbs.neededIndices.at(i)]; TODO
-      pid = dbs.seedPoints.at(0);
-      dbs.seedPoints.erase(dbs.seedPoints.begin());
+    for(int i; i< loopCount; i++) {
+    // while(!dbs.seedPoints.empty()) { 
+      pid = (*ind)[dbs.neededIndices.at(i)]; //TODO
+      // pid = dbs.seedPoints.at(0);
+      // dbs.seedPoints.erase(dbs.seedPoints.begin());
       // getting the local neighborhoods of local point
       ne.clear();
       ne_outer.clear();
@@ -834,7 +836,7 @@ namespace NWUClustering {
       // if(rank == 0) cout << pid << " +++++++++++++++++++++++ ne " << ne.size() << "\tne_outer " << ne_outer.size() << endl;
       int ne_outerSize = ne_outer.size();
       // if the total neighborhood size meets minimum points value
-      if(ne.size() + ne_outerSize >= dbs.m_minPts) {
+      if(ne.size() + ne_outerSize >= minPts) {
         // pid is a core point
         root = pid;
         dbs.m_corepoint[pid] = 1;
@@ -869,20 +871,22 @@ namespace NWUClustering {
             get_neighborhood_points(dbs, ne2, ne_outer2, npid);
             // if(rank == 0) cout << "\t" << npid << " ////////////////////////// ne2 " << ne2.size() << "\tne_outer2 " << ne_outer2.size() << endl;
             
-            if(((ne2.size() + ne_outer2.size()) >= dbs.m_minPts) && (ne.size() > 0)) {
+            if(((ne2.size() + ne_outer2.size()) >= minPts) && (ne.size() > 0)) {
               // `ne` = `ne` - `ne2`
               sort(ne2.begin(), ne2.end(), compareByIdx);
               ne = kdtree_set_difference(ne, ne2);
               // newNeDiff.clear();
-              newNeInt.clear();
-              newNeInt = kdtree_set_intersection(ne, ne2);
-              
-              // need to get the `pid` of each point and remove it from `dbs.seedPoints`
-              if(newNeInt.size() > 0) {
-                // if(rank == 0) cout << "newNeIntSize > 0 - " << newNeIntSize << endl;
-                erasePids.clear();
-                get_ids(newNeInt, erasePids);
-                dbs.seedPoints = kdtree_id_set_difference(dbs.seedPoints, erasePids);
+              if(ne.size() > 0) {
+                newNeInt.clear();
+                newNeInt = kdtree_set_intersection(ne, ne2);
+                
+                // need to get the `pid` of each point and remove it from `dbs.seedPoints`
+                if(newNeInt.size() > 0) {
+                  // if(rank == 0) cout << "newNeIntSize > 0 - " << newNeIntSize << endl;
+                  erasePids.clear();
+                  get_ids(newNeInt, erasePids);
+                  dbs.seedPoints = kdtree_id_set_difference(dbs.seedPoints, erasePids);
+                }
               }
             }
           }
@@ -1251,7 +1255,11 @@ namespace NWUClustering {
      to the range beginning at diff_first, which is also sorted.
   */
   kdtree2_result_vector kdtree_set_difference(kdtree2_result_vector ne, kdtree2_result_vector ne2){
-    int flag = 0;
+    // int rank, nproc;    
+    // MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    // MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+    int diffFlag = 0;
+    int intFlag = 0;
     vector<kdtree2_result>::iterator first1 = ne.begin();
     vector<kdtree2_result>::iterator first2 = ne2.begin();
     vector<kdtree2_result>::iterator last1 = ne.end();
@@ -1266,24 +1274,29 @@ namespace NWUClustering {
         diff.push_back(*first1);
         diff_first++;
         first1++;
-        flag = 1;
+        diffFlag = 1;
       }else if(first2->idx < first1->idx){
         ++first2;
       } else {
+        intFlag = 1;
         ++first1;
         ++first2;
       }
     }
-    if(flag) {
+    if(diffFlag || (first1 < last1)) {
       while (first1 != last1){
         diff.push_back(*first1);
         ++first1;
       }
-      // kdtree_copy(first1, last1, diff_first);
-      // copy(first1, last1, back_inserter(diff));
       return diff;
+    } else if(intFlag) {
+      // There was no difference, but there was an intersection.
+      // So need to return an empty vector
+      return diff;
+    } else {
+      // The 2 vectors are completely different, so just return the first vector.
+      return ne;
     }
-    return ne;
   }
 
   /*
@@ -1318,7 +1331,7 @@ namespace NWUClustering {
         ++first2;
       }
     }
-    if(diffFlag) {
+    if(diffFlag || (first1 < last1)) {
       // There is a difference between the first and second vectors
       while (first1 != last1){
         diff.push_back(*first1);
