@@ -724,10 +724,10 @@ namespace NWUClustering {
         i++;
       }
     }
-    // vector<int>* ind = m_kdtree->getIndex();
-    // for(i = 0; i < numPts; i++){
-    //   seedPoints.push_back((*ind)[neededIndices.at(i)]);
-    // }
+    vector<int>* ind = m_kdtree->getIndex();
+    for(i = 0; i < numPts; i++){
+      seedPoints.push_back((*ind)[neededIndices.at(i)]);
+    }
   }
 
   // "uf" == "Union Find"
@@ -824,11 +824,11 @@ namespace NWUClustering {
     
     // the main part of the DBSCAN algorithm (called local computation)
     start = MPI_Wtime();
-    for(int i; i< loopCount; i++) {
-    // while(!dbs.seedPoints.empty()) { 
-      pid = (*ind)[dbs.neededIndices.at(i)]; //TODO
-      // pid = dbs.seedPoints.at(0);
-      // dbs.seedPoints.erase(dbs.seedPoints.begin());
+    // for(int i; i< loopCount; i++) {
+    while(!dbs.seedPoints.empty()) { 
+      // pid = (*ind)[dbs.neededIndices.at(i)]; //TODO
+      pid = dbs.seedPoints.at(0);
+      dbs.seedPoints.erase(dbs.seedPoints.begin());
       // getting the local neighborhoods of local point
       ne.clear();
       ne_outer.clear();
