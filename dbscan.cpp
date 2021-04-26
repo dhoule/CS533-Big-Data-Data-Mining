@@ -1321,6 +1321,12 @@ namespace NWUClustering {
     return ne;
   }
 
+  /*
+    Preforms vector set intersection based on the KdTree IDs.
+
+    vector<int> ne - vector to be tested against
+    vector<int> ne2  - vector that is the testee
+  */
   vector<int> kdtree_id_set_intersection(vector<int> ne, vector<int> ne2) {
     vector<int>::iterator first1 = ne.begin();
     vector<int>::iterator first2 = ne2.begin();
