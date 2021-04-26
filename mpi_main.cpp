@@ -124,7 +124,7 @@ int main(int argc, char** argv) {
 
   // make sure `seed_percentage` is within the specified range
   if((0.0 >= seed_percentage) || (1.0 < seed_percentage)) {
-    if(rank == proc_of_interest) cout << "\n\nFor -k, please use a percentage greater than 0.0 and less than or equal to 1.0." << endl;
+    if(rank == proc_of_interest) cout << "\n\nFor -p, please use a percentage greater than 0.0 and less than or equal to 1.0." << endl;
     MPI_Finalize();
     return 0;
   }
